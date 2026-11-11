@@ -1,0 +1,26 @@
+bin/
+core/build/
+
+# Populated from quickshell/ by `make sync-shell` for embedded builds
+core/internal/shellembed/dist/
+
+# Populated by `make -C core qtbase` for QTBASE=1 builds
+core/internal/qtbaseembed/lib/
+
+# Written by the runtime for qmlls
+.qmlls.ini
+
+*.qmlc
+*.jsc
+__pycache__/
+
+*.test
+*.out
+coverage.*
+
+go.work
+go.work.sum
+
+.env*
+.envrc
+.direnv/

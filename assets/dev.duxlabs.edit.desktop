@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Dux Edit
+Comment=Dux app starter
+Exec=dux-edit
+Icon=dev.duxlabs.edit
+Terminal=false
+Categories=Utility;Qt;
+StartupNotify=true
+StartupWMClass=dev.duxlabs.edit
