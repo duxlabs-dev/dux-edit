@@ -1,0 +1,36 @@
+name: JS tests
+
+on:
+  push:
+    paths:
+      - "quickshell/**"
+      - "Makefile"
+      - ".github/workflows/js-tests.yml"
+  pull_request:
+    branches: [master, main]
+    paths:
+      - "quickshell/**"
+      - "Makefile"
+      - ".github/workflows/js-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test-js:
+    name: Test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: true
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Run tests
+        run: make test-js

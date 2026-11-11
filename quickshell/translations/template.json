@@ -1,0 +1,1640 @@
+[
+  {
+    "term": "%1 (U+%2) cannot be written in this encoding.",
+    "translation": "",
+    "context": "dialog message; %1 is a character, %2 its Unicode code point",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 already exists. Replacing it overwrites its contents.",
+    "translation": "",
+    "context": "dialog message; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 characters",
+    "translation": "",
+    "context": "status bar character count",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 characters, %2 lines",
+    "translation": "",
+    "context": "status bar document counts",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 documents have unsaved changes from an earlier session.",
+    "translation": "",
+    "context": "recovery notice; %1 is a count",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 documents were opened as administrator and have no crash recovery. Quitting discards their unsaved changes.",
+    "translation": "",
+    "context": "dialog message; %1 is a count",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 is %2 MB. Large files use a lot of memory and open without highlighting.",
+    "translation": "",
+    "context": "dialog message; %1 is a file name, %2 a size",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 is a binary file.",
+    "translation": "",
+    "context": "error opening a file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 is a folder.",
+    "translation": "",
+    "context": "error opening a file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 is open in another Dux Edit window.",
+    "translation": "",
+    "context": "error opening a file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 is too large to open.",
+    "translation": "",
+    "context": "error opening a file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 of %2 characters",
+    "translation": "",
+    "context": "status bar selected and total characters",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 was deleted from disk.",
+    "translation": "",
+    "context": "notice; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1 was opened as administrator and has no crash recovery. Quitting discards its unsaved changes.",
+    "translation": "",
+    "context": "dialog message; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "%1/%2",
+    "translation": "",
+    "context": "find bar counter, current match and total",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "1 document has unsaved changes from an earlier session.",
+    "translation": "",
+    "context": "recovery notice",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Add to Dictionary",
+    "translation": "",
+    "context": "spelling menu action",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Administrator access is not available inside a sandbox.",
+    "translation": "",
+    "context": "reason administrator access is unavailable",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Administrator access is not available.",
+    "translation": "",
+    "context": "reason administrator access is unavailable",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Administrator access needs pkexec, which is not installed.",
+    "translation": "",
+    "context": "reason administrator access is unavailable",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Administrator access needs the installed polkit policy.",
+    "translation": "",
+    "context": "reason administrator access is unavailable",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Advanced",
+    "translation": "",
+    "context": "view mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Also check text inside quotes in code.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Also used when Dux Shell colors are not available.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Always",
+    "translation": "",
+    "context": "wrap mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Amber",
+    "translation": "",
+    "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Apply",
+    "translation": "",
+    "context": "button that applies a color",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Attribute",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Auto",
+    "translation": "",
+    "context": "language picker entry that detects the language | spellcheck language entry that follows the system locale",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Auto saved",
+    "translation": "",
+    "context": "status bar save state",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Automatic",
+    "translation": "",
+    "context": "wrap mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Automatic wraps prose and Markdown and leaves code unwrapped.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Autosave",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Autosave failed for %1.",
+    "translation": "",
+    "context": "error; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Back",
+    "translation": "",
+    "context": "tooltip on the button leaving the settings page",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Blue",
+    "translation": "",
+    "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Cancel",
+    "translation": "",
+    "context": "dialog button to cancel",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Cannot Save in %1",
+    "translation": "",
+    "context": "dialog title; %1 is a text encoding",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Cannot load: %1",
+    "translation": "",
+    "context": "plugin settings; %1 is the reason",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Cannot open %1.",
+    "translation": "",
+    "context": "error opening a file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Cannot read %1.",
+    "translation": "",
+    "context": "error opening a file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Change Color",
+    "translation": "",
+    "context": "tooltip on a syntax color swatch",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Check Spelling",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Check String Literals",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Close",
+    "translation": "",
+    "context": "find bar button",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Close Tab",
+    "translation": "",
+    "context": "tooltip on the button closing a tab",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Close tab",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Closing the Window",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Color for %1",
+    "translation": "",
+    "context": "dialog title; %1 is a syntax role such as keyword",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Colors",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Comment",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Constant",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Copy",
+    "translation": "",
+    "context": "edit menu action",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Copy HTML",
+    "translation": "",
+    "context": "markdown preview button",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Copy Path",
+    "translation": "",
+    "context": "tooltip on the status bar path",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Copy Text",
+    "translation": "",
+    "context": "markdown preview button",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Copy the tabs and settings of the DMS notepad.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Coral",
+    "translation": "",
+    "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Could not import DMS notes.",
+    "translation": "",
+    "context": "error",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Could not save %1.",
+    "translation": "",
+    "context": "error saving a file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Could not save %1. Try again.",
+    "translation": "",
+    "context": "error saving a file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Cut",
+    "translation": "",
+    "context": "edit menu action",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Cyan",
+    "translation": "",
+    "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Cycle the Markdown preview",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "DMS Notes",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Dark",
+    "translation": "",
+    "context": "theme mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Default",
+    "translation": "",
+    "context": "font family entry that follows the theme",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Deleted Line",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Discard Unsaved Changes?",
+    "translation": "",
+    "context": "dialog title",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Discard and Quit",
+    "translation": "",
+    "context": "button that quits and drops unsaved changes",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Dismiss",
+    "translation": "",
+    "context": "tooltip on a button that hides a banner",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Don't Save",
+    "translation": "",
+    "context": "button that closes a tab and drops its changes",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Dux Edit",
+    "translation": "",
+    "context": "application name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Dux Edit could not complete the request.",
+    "translation": "",
+    "context": "error when the backend refused a request",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Dux Edit found %1 notes from the DMS notepad. Importing copies them; DMS keeps its own.",
+    "translation": "",
+    "context": "dialog message; %1 is a count",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Dux Edit lost the connection to its core.",
+    "translation": "",
+    "context": "error when the backend process is unreachable",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Dux Shell",
+    "translation": "",
+    "context": "color source",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Dux Shell colors are used when the shell publishes them.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Editor",
+    "translation": "",
+    "context": "settings section",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Emphasis",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Encoding",
+    "translation": "",
+    "context": "tooltip on the status bar encoding",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Error",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Escape Sequence",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Files",
+    "translation": "",
+    "context": "settings section",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Find",
+    "translation": "",
+    "context": "find bar placeholder | shortcut description | window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Follow System",
+    "translation": "",
+    "context": "spellcheck language | theme mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Font Family",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Font Size",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Function",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Go",
+    "translation": "",
+    "context": "button that moves the cursor to a line",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Go to Line",
+    "translation": "",
+    "context": "dialog title",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Go to Line…",
+    "translation": "",
+    "context": "window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Go to line",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Green",
+    "translation": "",
+    "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "HTML copied",
+    "translation": "",
+    "context": "toast after copying the preview HTML",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Heading",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Highlight Anyway",
+    "translation": "",
+    "context": "status bar button that highlights a large file",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Highlighting",
+    "translation": "",
+    "context": "settings section",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Highlighting off for large files",
+    "translation": "",
+    "context": "status bar notice",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "How a Markdown document opens.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Ignore",
+    "translation": "",
+    "context": "spelling menu action, for this session",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Import",
+    "translation": "",
+    "context": "button that imports DMS notes",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Import DMS Notes?",
+    "translation": "",
+    "context": "dialog title",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Imported %1 DMS notes.",
+    "translation": "",
+    "context": "notice; %1 is a count",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Inline Code",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Insert Spaces",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Inserted Line",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Install hunspell to check spelling.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Invalid regular expression",
+    "translation": "",
+    "context": "find bar error",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Keep My Edits",
+    "translation": "",
+    "context": "conflict banner button that overwrites the file on disk",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Keeps It Running in the Background",
+    "translation": "",
+    "context": "close behavior",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Keyboard Shortcuts",
+    "translation": "",
+    "context": "settings section",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Keyword",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Language",
+    "translation": "",
+    "context": "setting name | tooltip on the status bar language",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Light",
+    "translation": "",
+    "context": "theme mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Line Endings",
+    "translation": "",
+    "context": "tooltip on the status bar line endings",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Line Numbers",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Line or line:column",
+    "translation": "",
+    "context": "placeholder of the go to line field",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Link",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Ln %1, Col %2",
+    "translation": "",
+    "context": "status bar cursor position",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Looking up suggestions…",
+    "translation": "",
+    "context": "spelling menu, while suggestions load",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Markdown Preview",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Match case",
+    "translation": "",
+    "context": "find bar toggle",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Menu",
+    "translation": "",
+    "context": "tooltip on the window menu button",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Mixed",
+    "translation": "",
+    "context": "status bar line endings when a file mixes them",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Mode",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Monochrome",
+    "translation": "",
+    "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Monospace Font",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Never",
+    "translation": "",
+    "context": "wrap mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "New",
+    "translation": "",
+    "context": "tooltip on the button creating a document",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "New Tab",
+    "translation": "",
+    "context": "tooltip on the button opening a new tab",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "New document",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Next match",
+    "translation": "",
+    "context": "find bar button",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Next tab",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "No DMS notes found.",
+    "translation": "",
+    "context": "notice",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "No dictionary is installed for this language.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "No file chooser is available. Install a desktop portal.",
+    "translation": "",
+    "context": "error when the portal file chooser is missing",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "No matches",
+    "translation": "",
+    "context": "find bar, the query matches nothing",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "No plugins found. Install plugins in %1.",
+    "translation": "",
+    "context": "plugin settings empty state; %1 is a folder",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "No suggestions",
+    "translation": "",
+    "context": "spelling menu",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Not Now",
+    "translation": "",
+    "context": "button that declines an offer",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Number",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "OK",
+    "translation": "",
+    "context": "dialog button that confirms",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Off",
+    "translation": "",
+    "context": "markdown preview mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Open",
+    "translation": "",
+    "context": "button that opens a file | file chooser title | tooltip on the button opening files",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Open Large File?",
+    "translation": "",
+    "context": "dialog title",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Open as Administrator",
+    "translation": "",
+    "context": "button that reads a file with administrator rights",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Open files",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Opened as administrator. This document has no crash recovery.",
+    "translation": "",
+    "context": "notice when a file was read with administrator rights",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Operator",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Orange",
+    "translation": "",
+    "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Paste",
+    "translation": "",
+    "context": "edit menu action",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Path copied",
+    "translation": "",
+    "context": "notice after copying a file path",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Permission Denied",
+    "translation": "",
+    "context": "dialog title when a file cannot be read | dialog title when a file cannot be written",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Pink",
+    "translation": "",
+    "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Plugins",
+    "translation": "",
+    "context": "settings section",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Plugins run with your user's privileges. Only enable plugins you trust.",
+    "translation": "",
+    "context": "plugin settings intro",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Preprocessor",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Preset",
+    "translation": "",
+    "context": "color source | setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Preview",
+    "translation": "",
+    "context": "tooltip on the button cycling the Markdown preview",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Preview Only",
+    "translation": "",
+    "context": "markdown preview mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Previous match",
+    "translation": "",
+    "context": "find bar button",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Previous tab",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Punctuation",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Purple",
+    "translation": "",
+    "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Quits Dux Edit",
+    "translation": "",
+    "context": "close behavior",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Red",
+    "translation": "",
+    "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Regular Expression",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Regular expression",
+    "translation": "",
+    "context": "find bar toggle",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Reload From Disk",
+    "translation": "",
+    "context": "conflict banner button that drops unsaved edits",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Rename",
+    "translation": "",
+    "context": "button that renames a document",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Rename Document",
+    "translation": "",
+    "context": "dialog title",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Reopen",
+    "translation": "",
+    "context": "button that reopens a file with another encoding",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Reopen the last tabs on start. Unsaved work is always kept.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Reopen with Encoding",
+    "translation": "",
+    "context": "status bar encoding menu section",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Reopening %1 with another encoding discards your unsaved changes.",
+    "translation": "",
+    "context": "dialog message; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Replace",
+    "translation": "",
+    "context": "button that overwrites an existing file | find bar button | shortcut description | window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Replace All",
+    "translation": "",
+    "context": "find bar button",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Replace File?",
+    "translation": "",
+    "context": "dialog title when saving over an existing file",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Replace with",
+    "translation": "",
+    "context": "find bar replacement placeholder",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Replaced %1 matches",
+    "translation": "",
+    "context": "find bar, after replace all",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Rescan",
+    "translation": "",
+    "context": "button that looks for newly installed plugins",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Reset zoom",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Restore",
+    "translation": "",
+    "context": "button that restores unsaved documents",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Restore Session",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Save",
+    "translation": "",
+    "context": "button that saves a document | conflict banner button that writes the file again | shortcut description | tooltip on the save button",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Save As",
+    "translation": "",
+    "context": "file chooser title",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Save As…",
+    "translation": "",
+    "context": "window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Save Changes to %1?",
+    "translation": "",
+    "context": "dialog title; %1 is a document name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Save as",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Save as Administrator",
+    "translation": "",
+    "context": "button that writes a file with administrator rights",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Save as UTF-8",
+    "translation": "",
+    "context": "button that saves in the UTF-8 encoding",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Save files two seconds after the last edit.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Save with Encoding",
+    "translation": "",
+    "context": "status bar encoding menu section",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Saved",
+    "translation": "",
+    "context": "status bar save state",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Saving…",
+    "translation": "",
+    "context": "status bar save state",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Select All",
+    "translation": "",
+    "context": "edit menu action",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Settings",
+    "translation": "",
+    "context": "settings page title | shortcut description | window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Side by Side",
+    "translation": "",
+    "context": "markdown preview mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Simple",
+    "translation": "",
+    "context": "view mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Simple Mode",
+    "translation": "",
+    "context": "window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Simple hides the status details, line numbers and a lone tab.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Spellcheck",
+    "translation": "",
+    "context": "settings section",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Spellcheck Language",
+    "translation": "",
+    "context": "tooltip on the status bar spellcheck language",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Start typing…",
+    "translation": "",
+    "context": "placeholder in an empty document",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "String",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Strong Emphasis",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Syntax Highlighting",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Tab Width",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Tag",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Text",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Text copied",
+    "translation": "",
+    "context": "toast after copying the preview text",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "The Tab key inserts spaces instead of a tab.",
+    "translation": "",
+    "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "The document has characters this encoding cannot hold.",
+    "translation": "",
+    "context": "dialog message when saving fails because of the encoding",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "The editor component's root is not EditorPluginComponent.",
+    "translation": "",
+    "context": "plugin load error",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "The preview is not available",
+    "translation": "",
+    "context": "markdown preview, rendering failed",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Theme",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "This document is too large to preview",
+    "translation": "",
+    "context": "markdown preview",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "This file changed on disk.",
+    "translation": "",
+    "context": "conflict banner message",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "This file was deleted from disk.",
+    "translation": "",
+    "context": "conflict banner message",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Type",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Unsaved changes",
+    "translation": "",
+    "context": "status bar save state",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Untitled",
+    "translation": "",
+    "context": "name of a new, unsaved document",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Untitled %1",
+    "translation": "",
+    "context": "name of a new, unsaved document; %1 is a number",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Use a color like #3366cc.",
+    "translation": "",
+    "context": "error for a malformed color",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Use the Theme Color",
+    "translation": "",
+    "context": "tooltip on a button that resets a syntax color",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Variable",
+    "translation": "",
+    "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "View",
+    "translation": "",
+    "context": "settings section",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Whole word",
+    "translation": "",
+    "context": "find bar toggle",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Wrap Lines",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "You do not have permission to read %1.",
+    "translation": "",
+    "context": "dialog message; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "You do not have permission to save %1.",
+    "translation": "",
+    "context": "error saving a file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Your changes will be lost if you don't save them.",
+    "translation": "",
+    "context": "dialog message when closing a tab with unsaved changes",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Zoom in and out",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  }
+]

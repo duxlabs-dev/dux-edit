@@ -1,27 +1,22 @@
-# dux-app-starter
+# Dux Edit
 
-A template for a desktop app built like the Dux Labs apps: a Go binary that carries its own QML UI and runs it on [dux-qt-base](https://github.com/duxlabs-dev/dux-qt-base).
+A text and document editor for the Dux Labs desktop. It opens any text file without a project around it: notes, config files, scripts, Markdown. It sits between a scratchpad and an IDE, and takes over from the DMS notepad.
 
-The demo is a counter. The Go backend owns the number, the window shows it, and `dux-edit ipc counter.add` changes it from a terminal while the window is open.
+- Tabs, drafts that survive a restart, and crash recovery
+- Syntax highlighting with [Chroma](https://github.com/alecthomas/chroma), colored from the desktop theme
+- Markdown preview, spellcheck, find and replace with regular expressions
+- Keeps encodings and line endings as they are, and saves root-owned files through polkit
+- Simple and Advanced modes
 
-## What's in here
-
-| Path | What it is |
-|---|---|
-| `core/` | The Go side. [dux-go](https://github.com/duxlabs-dev/dux-go) provides the `run`, `restart` and `kill` commands, supervises the UI process, and serves the unix socket the UI talks to. |
-| `quickshell/` | The QML side. `shell.qml` is the entrypoint and `Services/Backend.qml` is the socket client. |
-| `dux-qml-common/` | Submodule with the shared widgets and theme tokens, symlinked in as `quickshell/DCommon`. |
-| `dux-qt-base/` | Submodule with the runtime. Only built with `QTBASE=1`. |
-| `assets/` | Desktop entry and icon. |
-| `scripts/format-staged.py` | Formats staged QML with qmlls. |
+Dux Edit is a Go binary that carries its own QML UI and runs it on [dux-qt-base](https://github.com/duxlabs-dev/dux-qt-base).
 
 ## Build and run
 
-You need Go and dux-qt-base (the `dux-qt-base` package, `libdux-qt-base0` on Debian and Ubuntu).
+You need Go and dux-qt-base 0.4.0 or newer (the `dux-qt-base` package, `libdux-qt-base0` on Debian and Ubuntu). Spellcheck uses `hunspell` and its dictionaries when they are installed.
 
 ```sh
-git clone --recurse-submodules https://github.com/you/yourapp.git
-cd yourapp
+git clone --recurse-submodules https://github.com/duxlabs-dev/dux-edit.git
+cd dux-edit
 make run
 ```
 
@@ -32,63 +27,32 @@ make
 sudo make install
 ```
 
-`make` builds `core/bin/dux-edit` with the UI embedded. `make install` puts the binary, desktop entry and icon under `/usr/local`.
-
-`make QTBASE=1` also builds dux-qt-base from the submodule and embeds it, so the binary runs without the package installed. The build dependencies are listed in [BUILD.md](https://github.com/duxlabs-dev/dux-qt-base/blob/master/BUILD.md).
+`make` builds `core/bin/dux-edit` with the UI embedded. `make install` puts the binary, the `dedit` alias, the desktop entry and the icon under `/usr/local`. `make QTBASE=1` also builds dux-qt-base from the submodule and embeds it.
 
 ## Using it
 
 ```sh
-dux-edit                           # show the window, start the app first if it is not running
-dux-edit run                       # run in the foreground
-dux-edit run -d                    # run in the background
-dux-edit ipc counter.add amount=5
-dux-edit ipc counter.reset
-dux-edit restart
+dux-edit                          # show the window, start the app first if it is not running
+dux-edit notes.md todo.txt        # open files as tabs in the running app
+dux-edit main.go --line 42 --column 7
+dux-edit --simple notes.md        # Simple mode
+dux-edit --new-instance           # a separate app instead of tabs in the running one
+dux-edit run -d                   # run in the background
+dux-edit ipc describe             # every socket method
 dux-edit kill
 ```
 
-## How it works
+A file named like a command (`run`, `kill`, `ipc`, `qs`, `version`, `help`, ...) needs a path: `dux-edit ./run`.
 
-1. `dux-edit run` starts the backend, which listens on a unix socket in `$XDG_RUNTIME_DIR`.
-2. It then starts itself again as `dux-edit qs`. That process loads `libdux-qt-base.so` and runs `shell.qml`, from the copy embedded in the binary or from the dir given with `-c`.
-3. The UI gets the socket path in `DUX_EDIT_SOCKET`. `Services/Backend.qml` connects to it, sends requests and subscribes to topics.
-4. Messages are one JSON object per line. `{"id":1,"method":"counter.add","params":{"amount":5}}` is answered with `{"id":1,"result":{"value":5}}`, and every subscriber of `counter` gets `{"event":"counter","data":{"value":5}}`.
-5. `dux-edit ipc` uses the same socket, so anything the UI can call you can call from a terminal.
+## Where things live
 
-## Adding a feature
-
-The counter shows the three pieces a feature needs:
-
-- **Go handlers** in `core/internal/backend/counter.go`, registered in `routes()` in `backend.go`. Publish on the bus when state changes, and add the topic to `replayState` so a UI that subscribes later gets the current state.
-- **A QML service** in `quickshell/Services` that subscribes to the topic and exposes it as properties, like `Counter.qml`.
-- **A view** that binds to the service, like `Modules/MainWindow.qml`.
-
-## Theme
-
-The widgets take colors, spacing and fonts from `Style` in dux-qml-common. With nothing set it uses its stock theme. To use your own, hand it your singletons at startup as described in [the contract](https://github.com/duxlabs-dev/dux-qml-common#the-contract).
-
-## Renaming
-
-Four names identify the app. From the repo root, with your own values in place of `notes`, `NOTES`, `org.you.notes` and `you/notes`:
-
-```sh
-git grep -lE 'dux-edit|DUX_EDIT|dux-app-starter' | xargs sed -i \
-  -e 's|duxlabs-dev/dux-edit|you/notes|g' \
-  -e 's|com\.example\.dux-edit|org.you.notes|g' \
-  -e 's|dux-edit|notes|g' \
-  -e 's|DUX_EDIT|NOTES|g'
-git mv core/cmd/dux-edit core/cmd/notes
-git mv assets/dev.duxlabs.edit.desktop assets/org.you.notes.desktop
-git mv assets/dev.duxlabs.edit.svg assets/org.you.notes.svg
-```
-
-| Name | Used for |
+| Path | What |
 |---|---|
-| `dux-edit` | Binary, socket and pid file names, cache dir |
-| `DUX_EDIT` | Prefix of the env vars: `DUX_EDIT_SOCKET`, `DUX_EDIT_SHELL_DIR`, `DUX_EDIT_LOG_LEVEL` |
-| `dev.duxlabs.edit` | Wayland app id, desktop entry and icon name |
-| `github.com/duxlabs-dev/dux-edit` | Go module path |
+| `~/.config/dux/edit/settings.json` | Settings |
+| `~/.config/dux/edit/custom_dictionary.txt` | Words added to the spellcheck dictionary, one per line |
+| `~/.config/dux/edit/plugins/` | Plugins |
+| `~/.local/state/dux/edit/session.json` | Open tabs (never their text) |
+| `~/.local/state/dux/edit/swap/` | Drafts and unsaved changes |
 
 ## License
 

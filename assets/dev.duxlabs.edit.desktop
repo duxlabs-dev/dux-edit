@@ -1,10 +1,18 @@
 [Desktop Entry]
 Type=Application
 Name=Dux Edit
-Comment=Dux app starter
-Exec=dux-edit
+GenericName=Text Editor
+Comment=Edit text, code and Markdown documents
+Exec=dux-edit %F
 Icon=dev.duxlabs.edit
 Terminal=false
-Categories=Utility;Qt;
+Categories=Utility;TextEditor;Qt;
+Keywords=text;editor;notepad;markdown;code;plaintext;
+MimeType=text/plain;text/markdown;text/x-markdown;application/x-zerosize;text/x-log;text/csv;text/tab-separated-values;text/x-diff;text/x-patch;application/json;application/xml;text/xml;application/x-yaml;application/yaml;application/toml;application/x-desktop;text/x-shellscript;application/x-shellscript;text/x-python;text/x-csrc;text/x-chdr;text/x-c++src;text/x-c++hdr;text/x-go;text/rust;text/x-rust;text/x-java;text/javascript;application/javascript;text/x-typescript;text/css;text/html;text/x-qml;text/x-lua;text/x-makefile;text/x-cmake;text/x-sql;application/x-ruby;text/x-php;text/x-ini;text/x-nix;text/x-kdl;
 StartupNotify=true
 StartupWMClass=dev.duxlabs.edit
+Actions=new-instance;
+
+[Desktop Action new-instance]
+Name=New Window
+Exec=dux-edit --new-instance

@@ -52,6 +52,8 @@ sync-shell:
 	@rm -rf $(EMBED_DIR)
 	@mkdir -p $(EMBED_DIR)
 	@tar -C $(SHELL_SRC) --exclude=.qmlls.ini -chf - . | tar -C $(EMBED_DIR) -xf -
+	@rm -rf $(EMBED_DIR)/tests
+	@rm -f $(EMBED_DIR)/translations/extract_translations.py
 	@cd $(EMBED_DIR) && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-16 > .dankrev
 
 build: sync-shell $(QTBASE_DEP)

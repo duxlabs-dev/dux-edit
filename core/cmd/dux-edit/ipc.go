@@ -15,7 +15,8 @@ var ipcCmd = &cobra.Command{
 	Short: "Send an IPC request to the running " + appID,
 	Long: `Send an IPC request to the running ` + appID + ` and print the result as JSON.
 
-  ` + appID + ` ipc counter.add amount=5
+  ` + appID + ` ipc doc.open path=/etc/hostname
+  ` + appID + ` ipc describe
 
 Params are key=value. Values that parse as JSON are sent typed, anything else as a string.`,
 	Args:                  cobra.MinimumNArgs(1),
@@ -25,30 +26,33 @@ Params are key=value. Values that parse as JSON are sent typed, anything else as
 		if err != nil {
 			return err
 		}
-		socketPath, err := runningSocket()
+		result, err := callRunning(args[0], params)
 		if err != nil {
 			return err
 		}
-		client, err := ipc.Dial(socketPath)
-		if err != nil {
-			return err
-		}
-		defer client.Close()
-
-		resp, err := client.Call(ipc.Request{ID: 1, Method: args[0], Params: params})
-		if err != nil {
-			return err
-		}
-		if resp.Error != "" {
-			return fmt.Errorf("ipc error: %s", resp.Error)
-		}
-		out, err := json.MarshalIndent(resp.Result, "", "  ")
-		if err != nil {
-			return err
-		}
-		fmt.Println(string(out))
-		return nil
+		return printJSON(result)
 	},
+}
+
+func callRunning(method string, params map[string]any) (any, error) {
+	socketPath, err := runningSocket()
+	if err != nil {
+		return nil, err
+	}
+	client, err := ipc.Dial(socketPath)
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	resp, err := client.Call(ipc.Request{ID: 1, Method: method, Params: params})
+	if err != nil {
+		return nil, err
+	}
+	if resp.Error != "" {
+		return nil, fmt.Errorf("ipc error: %s", resp.Error)
+	}
+	return resp.Result, nil
 }
 
 func runningSocket() (string, error) {

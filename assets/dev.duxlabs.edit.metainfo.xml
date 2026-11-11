@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>dev.duxlabs.edit</id>
+  <launchable type="desktop-id">dev.duxlabs.edit.desktop</launchable>
+  <name>Dux Edit</name>
+  <summary>Text and document editor for the dux desktop</summary>
+
+  <description>
+    <p>Dux Edit is a standalone text, code and Markdown editor for the modern Linux desktop with a Material Design 3 inspired UI. It is built with Quickshell, Qt6, and Go, and pairs with Dux Shell (DMS) for an integrated experience.</p>
+    <p>It highlights code, checks spelling, previews Markdown, keeps unsaved work across restarts, preserves encodings and line endings, and saves protected files as administrator.</p>
+  </description>
+
+  <developer id="dev.duxlabs">
+    <name>Dux Labs</name>
+  </developer>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <provides>
+    <binary>dux-edit</binary>
+    <mediatype>text/plain</mediatype>
+    <mediatype>text/markdown</mediatype>
+  </provides>
+
+  <url type="homepage">https://duxlabs.dev</url>
+  <url type="bugtracker">https://github.com/duxlabs-dev/dux-edit/issues</url>
+  <url type="vcs-browser">https://github.com/duxlabs-dev/dux-edit</url>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="0.1.0" date="2026-11-11" />
+  </releases>
+</component>
