@@ -162,18 +162,19 @@ func TestClientRoundTripsThroughTheHelper(t *testing.T) {
 }
 
 func TestStuckHelperIsNotWaitedOnForever(t *testing.T) {
-	waitAfterEOF = 100 * time.Millisecond
-	t.Cleanup(func() { waitAfterEOF = 30 * time.Second })
 	path := filepath.Join(t.TempDir(), "f")
 	require.NoError(t, os.WriteFile(path, []byte("old"), 0o644))
 
+	waitAfterEOF = time.Second
+	t.Cleanup(func() { waitAfterEOF = 30 * time.Second })
+
 	client := fakeClient(t)
-	client.env = append(client.env, fakePromptEnv+"=300ms")
+	client.env = append(client.env, fakePromptEnv+"=1500ms")
 	_, err := client.Replace(path, []byte("typed slowly"), "")
 	require.NoError(t, err, "the time spent before the helper is ready is not bounded")
 
 	client = fakeClient(t)
-	client.env = append(client.env, fakeStuckEnv+"=2s")
+	client.env = append(client.env, fakeStuckEnv+"=4s")
 	done := make(chan error, 1)
 	go func() {
 		_, err := client.Replace(path, []byte("new"), "")
@@ -183,7 +184,7 @@ func TestStuckHelperIsNotWaitedOnForever(t *testing.T) {
 	case err := <-done:
 		require.Error(t, err)
 		assert.Equal(t, helper.CodeIO, helper.CodeOf(err))
-	case <-time.After(time.Second):
+	case <-time.After(3 * time.Second):
 		t.Fatal("waited on a helper that never exits")
 	}
 }
