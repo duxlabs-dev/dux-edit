@@ -13,7 +13,7 @@ SettingsPage {
 
     signal colorEditRequested(string role, string label, string current)
 
-    readonly property var palette: Highlight.palette
+    readonly property var syntaxPalette: Highlight.palette
     readonly property bool customized: Object.keys(SettingsData.syntaxColors).length > 0
     readonly property var roleGroups: [
         {
@@ -133,7 +133,7 @@ SettingsPage {
                         required property string modelData
                         readonly property string label: root.roleLabel(modelData)
                         readonly property bool overridden: SettingsData.syntaxColors[modelData] !== undefined
-                        readonly property string roleColor: root.palette[SyntaxPalette.roles.indexOf(modelData)]?.color ?? "transparent"
+                        readonly property string roleColor: root.syntaxPalette[SyntaxPalette.roles.indexOf(modelData)]?.color ?? "transparent"
 
                         width: (grid.width - grid.spacing * (grid.columns - 1)) / grid.columns
                         height: Style.listItemHeight

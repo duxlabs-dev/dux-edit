@@ -240,7 +240,7 @@ Rectangle {
 
                 SettingsDropdownRow {
                     text: I18n.tr("Mode", "setting name")
-                    description: I18n.tr("Simple hides the status details, line numbers and a lone tab, and centers wrapped text.", "setting description")
+                    description: I18n.tr("Simple hides the status details, line numbers and a lone tab.", "setting description")
                     options: [I18n.tr("Advanced", "view mode"), I18n.tr("Simple", "view mode")]
                     optionValues: ["advanced", "simple"]
                     currentValue: SettingsData.viewMode

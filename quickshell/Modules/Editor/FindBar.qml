@@ -13,7 +13,7 @@ Rectangle {
     id: root
 
     required property var doc
-    required property Item editor
+    required property EditorPane editor
 
     property bool opened: false
     property bool replaceVisible: false

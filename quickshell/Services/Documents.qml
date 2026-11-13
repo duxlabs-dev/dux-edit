@@ -139,7 +139,7 @@ Singleton {
         const base = I18n.tr("Untitled", "name of a new, unsaved document");
         if (!used.includes(base))
             return base;
-        for (let n = 2;; n++) {
+        for (let n = 2; ; n++) {
             const title = I18n.tr("Untitled %1", "name of a new, unsaved document; %1 is a number").arg(n);
             if (!used.includes(title))
                 return title;
@@ -546,6 +546,10 @@ Singleton {
         saveWith(doc, options, null, false);
     }
 
+    function draftFileName(title) {
+        return title.lastIndexOf(".") > 0 ? title : title + ".txt";
+    }
+
     function saveAs(doc, done, options) {
         if (!doc?.loaded)
             return;
@@ -553,7 +557,7 @@ Singleton {
         Backend.call("dialog.saveFile", {
             "title": I18n.tr("Save As", "file chooser title"),
             "dir": doc.isDraft ? (recent ? AppPaths.dirName(recent) : AppPaths.home) : AppPaths.dirName(doc.path),
-            "name": doc.isDraft ? doc.title : AppPaths.baseName(doc.path)
+            "name": doc.isDraft ? draftFileName(doc.title) : AppPaths.baseName(doc.path)
         }, result => {
             if (!root.dialogOk(result))
                 return;

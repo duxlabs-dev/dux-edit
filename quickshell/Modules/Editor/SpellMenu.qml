@@ -10,26 +10,25 @@ import qs.Services
 FileMenu {
     id: root
 
-    required property Item editor
+    required property EditorPane editor
 
     // {start, end, word} of the misspelling under the click, or null.
     property var misspelling: null
     property var suggestions: []
     property bool loadingSuggestions: false
     property int requestSeq: 0
+    property string subMenuKind: ""
 
     readonly property bool canEdit: !editor.doc.readOnly
     readonly property bool hasSelection: editor.selectionEnd > editor.selectionStart
 
     // A Popup is not an Item, so it is held by a property and given the menu's parent to show in.
     property FileMenu subMenu: FileMenu {
-        property string kind: ""
-
         parent: root.parent
         parentMenu: root
 
         FileMenuItem {
-            visible: root.subMenu.kind === "lines"
+            visible: root.subMenuKind === "lines"
             iconName: "content_copy"
             text: I18n.tr("Duplicate", "editor context menu, duplicate the line or selection")
             enabled: root.canEdit
@@ -37,7 +36,7 @@ FileMenu {
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "lines"
+            visible: root.subMenuKind === "lines"
             iconName: "delete"
             text: I18n.tr("Delete Lines", "editor context menu action")
             enabled: root.canEdit
@@ -45,7 +44,7 @@ FileMenu {
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "lines"
+            visible: root.subMenuKind === "lines"
             iconName: "arrow_upward"
             text: I18n.tr("Move Up", "editor context menu, move lines up")
             enabled: root.canEdit
@@ -53,7 +52,7 @@ FileMenu {
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "lines"
+            visible: root.subMenuKind === "lines"
             iconName: "arrow_downward"
             text: I18n.tr("Move Down", "editor context menu, move lines down")
             enabled: root.canEdit
@@ -61,7 +60,7 @@ FileMenu {
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "lines"
+            visible: root.subMenuKind === "lines"
             iconName: "format_indent_increase"
             text: I18n.tr("Indent", "editor context menu action")
             enabled: root.canEdit
@@ -69,7 +68,7 @@ FileMenu {
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "lines"
+            visible: root.subMenuKind === "lines"
             iconName: "format_indent_decrease"
             text: I18n.tr("Unindent", "editor context menu action")
             enabled: root.canEdit
@@ -77,7 +76,7 @@ FileMenu {
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "lines"
+            visible: root.subMenuKind === "lines"
             iconName: "merge_type"
             text: I18n.tr("Join Lines", "editor context menu action")
             enabled: root.canEdit
@@ -85,7 +84,7 @@ FileMenu {
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "lines"
+            visible: root.subMenuKind === "lines"
             iconName: "sort_by_alpha"
             text: I18n.tr("Sort Lines", "editor context menu action")
             enabled: root.canEdit && root.hasSelection
@@ -93,26 +92,26 @@ FileMenu {
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "lines"
+            visible: root.subMenuKind === "lines"
             iconName: "horizontal_rule"
             text: I18n.tr("Select Line", "editor context menu action")
             onClicked: root.pick(() => root.editor.selectLine())
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "case"
+            visible: root.subMenuKind === "case"
             text: I18n.tr("UPPER CASE", "editor context menu, change case")
             onClicked: root.pick(() => root.editor.upperCase())
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "case"
+            visible: root.subMenuKind === "case"
             text: I18n.tr("lower case", "editor context menu, change case")
             onClicked: root.pick(() => root.editor.lowerCase())
         }
 
         FileMenuItem {
-            visible: root.subMenu.kind === "case"
+            visible: root.subMenuKind === "case"
             text: I18n.tr("Title Case", "editor context menu, change case")
             onClicked: root.pick(() => root.editor.titleCase())
         }
@@ -126,7 +125,7 @@ FileMenu {
 
     function openSub(kind) {
         close();
-        subMenu.kind = kind;
+        subMenuKind = kind;
         subMenu.openAt(x, y);
     }
 

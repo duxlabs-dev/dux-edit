@@ -292,7 +292,7 @@ Singleton {
         const store = stateStoreComponent.createObject(root, {
             "path": AppPaths.pluginStateDir + "/" + pluginId + "_state.json",
             "serialize": () => JSON.stringify(root._states[pluginId] || {}, null, 2)
-        });
+        }) as JsonStore;
         _stateStores[pluginId] = store;
         _states[pluginId] = store.objectFrom(store.read().trim()) ?? {};
         return _states[pluginId];

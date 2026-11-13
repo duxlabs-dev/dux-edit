@@ -47,10 +47,8 @@ Item {
     readonly property int resizeDelay: 100
     readonly property string fontFamily: SettingsData.fontFamily || (SettingsData.useMonospace ? Style.monoFontFamily : Style.fontFamily)
     readonly property int fontSize: SettingsData.fontSize
-    readonly property real padding: simple ? EditorMetrics.simplePadding : EditorMetrics.padding
+    readonly property real padding: EditorMetrics.padding
     readonly property bool gutterShown: SettingsData.showLineNumbers && !simple
-    readonly property real proseWidth: fontMetrics.averageCharacterWidth * EditorMetrics.proseColumns + padding * 2
-    readonly property bool centered: simple && wrapping && flickable.width > proseWidth
     readonly property real screenWidth: Math.max(1, Screen.width)
 
     readonly property bool previewOpen: markdown && (root.doc.previewMode === "split" || root.doc.previewMode === "full")
@@ -59,20 +57,22 @@ Item {
     readonly property bool highlightRequested: SettingsData.highlightEnabled
     readonly property bool highlightOn: highlightRequested && root.doc.tier === "exact"
     readonly property bool spellOn: Spell.active
-    readonly property bool findOpen: findLoader.item?.opened ?? false
-    readonly property int matchCount: findLoader.item?.matchCount ?? 0
+    readonly property FindBar findBar: findLoader.item as FindBar
+    readonly property MarkdownPreview preview: previewLoader.item as MarkdownPreview
+    readonly property bool findOpen: findBar?.opened ?? false
+    readonly property int matchCount: findBar?.matchCount ?? 0
     // Formats address text blocks by line number; a line separator splits a mirror line inside one block.
     property bool hasSeparators: false
     readonly property bool decorated: (highlightOn || spellOn || matchCount > 0) && !hasSeparators
 
     // Role 0 keeps the editor's own color; the role after the syntax roles marks matching brackets.
-    readonly property var palette: Highlight.palette.map((entry, role) => role === 0 ? ({}) : entry).concat([
+    readonly property var rolePalette: Highlight.palette.map((entry, role) => role === 0 ? ({}) : entry).concat([
         {
             "color": Style.primary,
             "bold": true
         }
     ])
-    readonly property int bracketRole: palette.length - 1
+    readonly property int bracketRole: rolePalette.length - 1
     readonly property color matchColor: Contrast.mix(Style.surface, Style.primary, Style.primarySelected.a)
 
     readonly property bool lineHighlightOn: SettingsData.highlightCurrentLine
@@ -293,7 +293,7 @@ Item {
     }
 
     function findStep(forward) {
-        if (findLoader.item?.search(forward))
+        if (findBar?.search(forward))
             return;
         openFind(false);
     }
@@ -408,11 +408,11 @@ Item {
     function openFind(withReplace) {
         const selection = textEdit.selectedText;
         findLoader.active = true;
-        findLoader.item.open(withReplace === true, /[\n\u2029]/.test(selection) ? "" : selection);
+        (findLoader.item as FindBar).open(withReplace === true, /[\n\u2029]/.test(selection) ? "" : selection);
     }
 
     function closeFind() {
-        findLoader.item?.close();
+        findBar?.close();
         focusEditor();
     }
 
@@ -515,7 +515,7 @@ Item {
         mirror.loading = false;
         updateCursor();
         refreshView(true);
-        previewLoader.item?.documentEdited();
+        preview?.documentEdited();
     }
 
     function applyPendingPosition() {
@@ -595,8 +595,8 @@ Item {
             hasSeparators = hasSeparators || /[\u2028\u2029\ufdd0\ufdd1]/.test(change.text);
         doc.charCount = length - mirror.pairs;
         doc.lineCount = mirror.index.count;
-        findLoader.item?.documentEdited(change);
-        previewLoader.item?.documentEdited();
+        findBar?.documentEdited(change);
+        preview?.documentEdited();
         return lines;
     }
 
@@ -811,7 +811,7 @@ Item {
         return {
             "spans": highlightOn ? Highlight.spans(mirror.docId) : null,
             "spell": spellOn ? Spell.ranges(mirror.docId) : null,
-            "matches": matchCount > 0 ? findLoader.item.matches : null
+            "matches": matchCount > 0 ? findBar.matches : null
         };
     }
 
@@ -936,7 +936,6 @@ Item {
     onLineHighlightOnChanged: placeLineHighlight()
     onFontFamilyChanged: refreshView(true)
     onFontSizeChanged: refreshView(true)
-    onCenteredChanged: refreshView(true)
     onPaddingChanged: refreshView(true)
 
     Component.onCompleted: root.doc.editor = root
@@ -987,7 +986,7 @@ Item {
         id: decorations
 
         document: textEdit.textDocument
-        palette: root.palette
+        palette: root.rolePalette
         spellColor: Style.error
         matchColor: root.matchColor
 
@@ -1084,9 +1083,8 @@ Item {
             TextEdit {
                 id: textEdit
 
-                x: root.centered ? Math.round((flickable.width - width) / 2) : 0
                 // Grow unwrapped text a screen at a time to avoid relayout on every width change.
-                width: root.wrapping ? (root.centered ? root.proseWidth : root.wrapWidth) : Math.ceil((contentWidth + leftPadding + rightPadding + 1) / root.screenWidth) * root.screenWidth
+                width: root.wrapping ? root.wrapWidth : Math.ceil((contentWidth + leftPadding + rightPadding + 1) / root.screenWidth) * root.screenWidth
                 height: Math.max(implicitHeight, flickable.height)
                 padding: root.padding
                 textFormat: TextEdit.PlainText

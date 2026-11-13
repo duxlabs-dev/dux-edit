@@ -6,9 +6,6 @@ import qs.DCommon.Common
 
 Singleton {
     readonly property real padding: Style.spacingM
-    readonly property real simplePadding: Style.spacingXL
-    // Simple mode centers prose in a column this many characters wide.
-    readonly property int proseColumns: 80
     readonly property real gutterPadding: Style.spacingS
     readonly property real dividerWidth: Style.dividerWidth
     readonly property int spellSuggestions: 6
