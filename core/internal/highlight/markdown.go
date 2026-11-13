@@ -2,6 +2,8 @@ package highlight
 
 import (
 	"bytes"
+	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -28,7 +30,17 @@ type mdPainter struct {
 	starts []int
 }
 
-func markdownSpans(lines []string) [][]span {
+type mdParse struct {
+	spans [][]span
+	// inner marks the lines of a top-level fenced or HTML block after its first: no block starts there.
+	inner []bool
+	open  bool
+	refs  []parser.Reference
+}
+
+func markdownSpans(lines []string) [][]span { return parseMarkdown(lines, nil).spans }
+
+func parseMarkdown(lines []string, refs []parser.Reference) mdParse {
 	p := &mdPainter{src: []byte(strings.Join(lines, "\n"))}
 	p.paint = make([]uint8, len(p.src))
 	p.starts = make([]int, len(lines))
@@ -37,8 +49,151 @@ func markdownSpans(lines []string) [][]span {
 		p.starts[i] = off
 		off += len(l) + 1
 	}
-	p.block(markdownParser().Parse(text.NewReader(p.src)))
-	return p.spans(lines)
+	pc := parser.NewContext()
+	for _, r := range refs {
+		pc.AddReference(r)
+	}
+	doc := markdownParser().Parse(text.NewReader(p.src), parser.WithContext(pc))
+	p.block(doc)
+	out := mdParse{spans: p.spans(lines)}
+	out.inner, out.open = p.opaque(doc, lines)
+	for _, r := range pc.References() {
+		out.refs = append(out.refs, parser.NewReference(bytes.Clone(r.Label()), bytes.Clone(r.Destination()), bytes.Clone(r.Title())))
+	}
+	return out
+}
+
+var htmlType1Close = regexp.MustCompile(`(?i)</(?:script|pre|style|textarea)>`)
+
+func (p *mdPainter) opaque(doc ast.Node, lines []string) (inner []bool, open bool) {
+	n := len(lines)
+	inner = make([]bool, n)
+	for c := doc.FirstChild(); c != nil; c = c.NextSibling() {
+		first, last, closed := -1, -1, true
+		switch c := c.(type) {
+		case *ast.FencedCodeBlock:
+			if c.Pos() < 0 {
+				break
+			}
+			first, _, _ = p.line(c.Pos())
+			last = first
+			if l := c.Lines(); l.Len() > 0 {
+				last, _, _ = p.line(l.At(l.Len() - 1).Start)
+			}
+			closed = last+1 < n && !mdBlank(lines[last+1])
+			if closed {
+				last++
+			}
+		case *ast.HTMLBlock:
+			l := c.Lines()
+			if l.Len() == 0 {
+				break
+			}
+			first, _, _ = p.line(l.At(0).Start)
+			last, _, _ = p.line(l.At(l.Len() - 1).Start)
+			switch {
+			case c.HasClosure():
+				last, _, _ = p.line(c.ClosureLine.Start)
+			case c.HTMLBlockType == ast.HTMLBlockType6, c.HTMLBlockType == ast.HTMLBlockType7:
+			default:
+				closed = l.Len() == 1 && htmlClosesOn(c.HTMLBlockType, lines[first])
+			}
+		default:
+			continue
+		}
+		if first < 0 {
+			first, closed = 0, false
+		}
+		if !closed {
+			last, open = n-1, true
+		}
+		for i := first + 1; i <= last; i++ {
+			inner[i] = true
+		}
+	}
+	return inner, open
+}
+
+func htmlClosesOn(kind ast.HTMLBlockType, line string) bool {
+	switch kind {
+	case ast.HTMLBlockType1:
+		return htmlType1Close.MatchString(line)
+	case ast.HTMLBlockType2:
+		return strings.Contains(line, "-->")
+	case ast.HTMLBlockType3:
+		return strings.Contains(line, "?>")
+	case ast.HTMLBlockType4:
+		return strings.Contains(line, ">")
+	case ast.HTMLBlockType5:
+		return strings.Contains(line, "]]>")
+	}
+	return false
+}
+
+func mdBlank(line string) bool { return strings.Trim(line, " \t") == "" }
+
+// mdCut says a line can start a block range parsed on its own: it follows a blank line and starts in column one.
+func mdCut(lines []string, inner []bool, i int) bool {
+	return !inner[i] && mdBlank(lines[i-1]) && lines[i] != "" && lines[i][0] > ' '
+}
+
+func mdHasRef(lines []string) bool {
+	return slices.ContainsFunc(lines, func(l string) bool { return strings.Contains(l, "]:") })
+}
+
+// mdDoc is the last parse of a Markdown document, kept so an edit re-parses only the blocks around it.
+type mdDoc struct {
+	lines []string
+	mdParse
+	partial int
+}
+
+func (m *mdDoc) update(lines []string) [][]span {
+	if !m.reparse(lines) {
+		m.mdParse = parseMarkdown(lines, nil)
+	}
+	m.lines = lines
+	return m.spans
+}
+
+// reparse parses the block range around the changed lines and splices the result; false when the edit reaches past it.
+func (m *mdDoc) reparse(lines []string) bool {
+	old := m.lines
+	if len(old) == 0 || len(lines) == 0 {
+		return false
+	}
+	p := 0
+	for p < len(old) && p < len(lines) && old[p] == lines[p] {
+		p++
+	}
+	if p == len(old) && p == len(lines) {
+		return true
+	}
+	s := 0
+	for s < len(old)-p && s < len(lines)-p && old[len(old)-1-s] == lines[len(lines)-1-s] {
+		s++
+	}
+	a := min(p, len(old)-1, len(lines)-1)
+	for a > 0 && !mdCut(lines, m.inner, a) {
+		a--
+	}
+	b := len(old) - s + 1
+	for b < len(old) && !mdCut(old, m.inner, b) {
+		b++
+	}
+	b = min(b, len(old))
+	nb := b + len(lines) - len(old)
+	if mdHasRef(old[a:b]) || mdHasRef(lines[a:nb]) {
+		return false
+	}
+	part := parseMarkdown(lines[a:nb], m.refs)
+	if part.open && nb < len(lines) {
+		return false
+	}
+	m.spans = slices.Replace(m.spans, a, b, part.spans...)
+	m.inner = slices.Replace(m.inner, a, b, part.inner...)
+	m.partial++
+	return true
 }
 
 func (p *mdPainter) set(a, b int, role Role, prose bool) {
@@ -157,7 +312,8 @@ func (p *mdPainter) fenced(n *ast.FencedCodeBlock) {
 	if closing < len(p.starts) {
 		_, a, b := p.lineBounds(closing)
 		fence := p.src[n.Pos()]
-		if t := bytes.TrimLeft(p.src[a:b], " \t"); len(t) > 0 && t[0] == fence {
+		t := bytes.Trim(p.src[a:b], " \t")
+		if len(t) >= p.run(n.Pos(), fence) && len(bytes.Trim(t, string(fence))) == 0 {
 			p.set(a, b, RoleCode, false)
 		}
 	}
@@ -334,7 +490,7 @@ func (p *mdPainter) linkEnd(n ast.Node) int {
 	if _, e, ok := p.extent(n); ok {
 		end = e
 	}
-	for end < len(p.src) && p.src[end] != ']' {
+	for end < len(p.src) && p.src[end] != ']' && !p.blockEnd(end) {
 		end++
 	}
 	end++
@@ -346,10 +502,12 @@ func (p *mdPainter) linkEnd(n ast.Node) int {
 		return end
 	}
 	depth := 0
-	for i := end; i < len(p.src) && i-end < 4096; i++ {
+	for i := end; i < len(p.src) && i-end < 4096 && !p.blockEnd(i); i++ {
 		switch p.src[i] {
 		case '\\':
-			i++
+			if i+1 < len(p.src) && p.src[i+1] != '\n' {
+				i++
+			}
 		case p.src[end]:
 			depth++
 		case closer:
@@ -359,6 +517,18 @@ func (p *mdPainter) linkEnd(n ast.Node) int {
 		}
 	}
 	return end
+}
+
+func (p *mdPainter) blockEnd(i int) bool {
+	if p.src[i] != '\n' {
+		return false
+	}
+	for i++; i < len(p.src) && p.src[i] != '\n'; i++ {
+		if p.src[i] != ' ' && p.src[i] != '\t' {
+			return false
+		}
+	}
+	return true
 }
 
 func (p *mdPainter) autoLink(n *ast.AutoLink) {

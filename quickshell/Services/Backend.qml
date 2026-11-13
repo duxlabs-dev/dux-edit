@@ -11,6 +11,8 @@ Singleton {
 
     readonly property string socketPath: Quickshell.env("DUX_EDIT_SOCKET")
     readonly property bool connected: socket.linkUp
+    // The core was reachable and no longer is: nothing typed from here on can be saved or kept for recovery.
+    property bool lost: false
 
     property var pendingCalls: ({})
     property var topicHandlers: ({})
@@ -139,9 +141,11 @@ Singleton {
 
         onConnectionStateChanged: {
             if (!linkUp) {
+                root.lost = root.lastCallId > 0;
                 root.failPendingCalls();
                 return;
             }
+            root.lost = false;
             root.call("subscribe", {
                 "topics": Object.keys(root.topicHandlers)
             }, null);

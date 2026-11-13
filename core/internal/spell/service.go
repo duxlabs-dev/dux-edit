@@ -212,7 +212,10 @@ func (s *Service) View(docID string, first, last, cursorLine, cursorCol int) {
 	last = max(last, first)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.open[docID] = true
+	// A view sent just before doc.close can land after DocClosed; it must not bring the document back.
+	if !s.open[docID] {
+		return
+	}
 	v, ok := s.views[docID]
 	if !ok {
 		v = &view{}

@@ -3,7 +3,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
-import Quickshell.Io
+import qs.DCommon.Common
 import qs.Common
 import qs.Services
 // Also makes the scanner write the qmldir for qs.Modules.Plugins, which otherwise only plugins import.
@@ -25,12 +25,12 @@ Singleton {
     property var loadedPlugins: ({})
     // Plugin id to why its component failed to load.
     property var loadErrors: ({})
-    // Contributions of loaded plugins, read by the shell chrome.
-    // commands: [{pluginId, id, title, icon, shortcut, run}]
-    property var commands: []
+    // Contributions of loaded plugins, read by the shell chrome. Empty while suspended.
+    // commands: [{pluginId, id, title, icon, shortcut, run}], shortcut a key sequence or ""
+    readonly property var commands: _commands
     // statusItems and sidePanels: [{pluginId, component}]
-    property var statusItems: []
-    property var sidePanels: []
+    readonly property var statusItems: _statusItems
+    readonly property var sidePanels: _sidePanels
 
     signal pluginDataChanged(string pluginId)
     signal pluginStateChanged(string pluginId)
@@ -38,12 +38,35 @@ Singleton {
     signal pluginUnloaded(string pluginId)
 
     property bool _startupScanPending: Object.keys(SettingsData.enabledPlugins || {}).length > 0
+    property bool _suspended: false
+    // The plugin being created, whose storage calls from onCompleted must keep their store.
+    property string _loading: ""
+    property var _commands: []
+    property var _statusItems: []
+    property var _sidePanels: []
     property bool _dataWanted: false
     property var _data: null
-    property bool _dataDirty: false
     property var _states: ({})
-    property var _stateFiles: ({})
-    property var _dirtyStates: ({})
+    property var _stateStores: ({})
+
+    function suspend() {
+        if (_suspended)
+            return;
+        _suspended = true;
+        for (const id in loadedPlugins)
+            _unload(id);
+        _releaseData();
+    }
+
+    function resume() {
+        if (!_suspended)
+            return;
+        _suspended = false;
+        if (_startupScanPending)
+            _startupScan();
+        else
+            _syncLoaded();
+    }
 
     // Scans only on request: when the settings page opens, after an install, and at startup when a plugin is enabled.
     function rescan() {
@@ -90,55 +113,67 @@ Singleton {
 
     function loadPluginData(pluginId, key, defaultValue) {
         const value = _pluginData()[pluginId]?.[key];
+        _releaseIdle(pluginId);
         return value === undefined ? defaultValue : value;
     }
 
     function savePluginData(pluginId, key, value) {
         const data = _pluginData();
         const current = data[pluginId] || {};
-        if (JSON.stringify(current[key]) === JSON.stringify(value))
-            return true;
-        data[pluginId] = Object.assign({}, current, {
-            [key]: value
-        });
-        _dataDirty = true;
-        writeTimer.restart();
-        pluginDataChanged(pluginId);
+        if (JSON.stringify(current[key]) !== JSON.stringify(value)) {
+            data[pluginId] = Object.assign({}, current, {
+                [key]: value
+            });
+            dataStore.save();
+            pluginDataChanged(pluginId);
+        }
+        _releaseIdle(pluginId);
         return true;
     }
 
     function loadPluginState(pluginId, key, defaultValue) {
         const value = _state(pluginId)[key];
+        _releaseIdle(pluginId);
         return value === undefined ? defaultValue : value;
     }
 
     function savePluginState(pluginId, key, value) {
         const state = _state(pluginId);
-        if (JSON.stringify(state[key]) === JSON.stringify(value))
-            return;
-        state[key] = value;
-        _markState(pluginId);
+        if (JSON.stringify(state[key]) !== JSON.stringify(value)) {
+            state[key] = value;
+            _markState(pluginId);
+        }
+        _releaseIdle(pluginId);
     }
 
     function clearPluginState(pluginId) {
-        if (Object.keys(_state(pluginId)).length === 0)
-            return;
-        _states[pluginId] = {};
-        _markState(pluginId);
+        if (Object.keys(_state(pluginId)).length > 0) {
+            _states[pluginId] = {};
+            _markState(pluginId);
+        }
+        _releaseIdle(pluginId);
     }
 
     function removePluginStateKey(pluginId, key) {
         const state = _state(pluginId);
-        if (!(key in state))
+        if (key in state) {
+            delete state[key];
+            _markState(pluginId);
+        }
+        _releaseIdle(pluginId);
+    }
+
+    function _startupScan() {
+        if (!Backend.connected)
             return;
-        delete state[key];
-        _markState(pluginId);
+        _startupScanPending = false;
+        rescan();
     }
 
     function _syncLoaded() {
         for (const id in loadedPlugins) {
             const m = manifest(id);
-            if (!m || m.error || !isEnabled(id))
+            if (_suspended || !m || m.error || !isEnabled(id))
                 _unload(id);
         }
         for (const m of availablePlugins) {
@@ -148,25 +183,29 @@ Singleton {
     }
 
     function _load(m) {
-        if (loadedPlugins[m.id] || m.error)
+        if (_suspended || loadedPlugins[m.id] || m.error)
             return;
         const component = Qt.createComponent("file://" + m.dir + "/" + m.editor, Component.PreferSynchronous);
         if (component.status !== Component.Ready) {
             _setLoadError(m.id, component.errorString());
             return;
         }
+        _loading = m.id;
         const instance = component.createObject(root, {
             "pluginId": m.id,
             "pluginService": root,
             "editor": root.editor
         });
+        _loading = "";
         if (!instance) {
             _setLoadError(m.id, component.errorString());
+            _releaseIdle(m.id);
             return;
         }
         if (!(instance instanceof EditorPluginComponent)) {
             instance.destroy();
             _setLoadError(m.id, I18n.tr("The editor component's root is not EditorPluginComponent.", "plugin load error"));
+            _releaseIdle(m.id);
             return;
         }
         _setLoadError(m.id, "");
@@ -188,10 +227,8 @@ Singleton {
         collectContributions();
         pluginUnloaded(pluginId);
         instance.destroy();
-        _flush();
-        _stateFiles[pluginId]?.destroy();
-        delete _stateFiles[pluginId];
-        delete _states[pluginId];
+        dataStore.flush();
+        _releaseState(pluginId);
     }
 
     function _setLoadError(pluginId, message) {
@@ -219,10 +256,10 @@ Singleton {
                     continue;
                 nextCommands.push({
                     "pluginId": id,
-                    "id": c.id ?? "",
-                    "title": c.title ?? "",
-                    "icon": c.icon ?? "",
-                    "shortcut": c.shortcut ?? "",
+                    "id": String(c.id ?? ""),
+                    "title": String(c.title ?? ""),
+                    "icon": String(c.icon ?? ""),
+                    "shortcut": typeof c.shortcut === "string" ? c.shortcut : "",
                     "run": c.run
                 });
             }
@@ -237,107 +274,97 @@ Singleton {
                     "component": plugin.sidePanel
                 });
         }
-        commands = nextCommands;
-        statusItems = nextStatus;
-        sidePanels = nextPanels;
+        _commands = nextCommands;
+        _statusItems = nextStatus;
+        _sidePanels = nextPanels;
     }
 
     function _pluginData() {
         if (_data)
             return _data;
         _dataWanted = true;
-        _data = _parse(dataFile.text());
+        _data = dataStore.objectFrom(dataStore.read().trim()) ?? {};
         return _data;
     }
 
     function _state(pluginId) {
         if (_states[pluginId])
             return _states[pluginId];
-        const file = stateFileComponent.createObject(root, {
-            "path": AppPaths.pluginStateDir + "/" + pluginId + "_state.json"
-        }) as FileView;
-        _stateFiles[pluginId] = file;
-        _states[pluginId] = _parse(file.text());
+        const store = stateStoreComponent.createObject(root, {
+            "path": AppPaths.pluginStateDir + "/" + pluginId + "_state.json",
+            "serialize": () => JSON.stringify(root._states[pluginId] || {}, null, 2)
+        });
+        _stateStores[pluginId] = store;
+        _states[pluginId] = store.objectFrom(store.read().trim()) ?? {};
         return _states[pluginId];
     }
 
     function _markState(pluginId) {
-        _dirtyStates[pluginId] = true;
-        writeTimer.restart();
+        _stateStores[pluginId].save();
         pluginStateChanged(pluginId);
     }
 
-    function _parse(text) {
-        if (!text || !text.trim())
-            return {};
-        try {
-            const value = JSON.parse(text);
-            if (value && typeof value === "object" && !Array.isArray(value))
-                return value;
-        } catch (e) {
-            log.warn("ignoring unreadable plugin data:", e);
-        }
-        return {};
+    // Keeps no store for a plugin that is not loaded, such as one saving from its onDestruction after suspend().
+    function _releaseIdle(pluginId) {
+        if (_suspended)
+            _releaseData();
+        if (!loadedPlugins[pluginId] && pluginId !== _loading)
+            _releaseState(pluginId);
     }
 
-    function _flush() {
-        writeTimer.stop();
-        if (_dataDirty) {
-            _dataDirty = false;
-            dataFile.setText(JSON.stringify(_data, null, 2));
-        }
-        const dirty = _dirtyStates;
-        _dirtyStates = {};
-        for (const id in dirty)
-            _stateFiles[id]?.setText(JSON.stringify(_states[id] || {}, null, 2));
+    function _releaseData() {
+        dataStore.flush();
+        _data = null;
+        _dataWanted = false;
+    }
+
+    function _releaseState(pluginId) {
+        const store = _stateStores[pluginId];
+        if (!store)
+            return;
+        store.flush();
+        // An empty path waits for a write in flight, which FileView does not do when destroyed.
+        store.path = "";
+        store.destroy();
+        delete _stateStores[pluginId];
+        delete _states[pluginId];
     }
 
     Component.onCompleted: {
-        if (_startupScanPending && Backend.connected) {
-            _startupScanPending = false;
-            rescan();
-        }
+        if (_startupScanPending)
+            _startupScan();
     }
 
-    Component.onDestruction: _flush()
+    Component.onDestruction: {
+        dataStore.flush();
+        for (const id in _stateStores)
+            _stateStores[id].flush();
+    }
 
     Connections {
         target: Backend
-        enabled: root._startupScanPending
+        enabled: root._startupScanPending && !root._suspended
 
         function onConnectedChanged() {
-            if (!Backend.connected)
-                return;
-            root._startupScanPending = false;
-            root.rescan();
+            root._startupScan();
         }
     }
 
-    Timer {
-        id: writeTimer
+    JsonStore {
+        id: dataStore
 
-        interval: EditorMetrics.pluginWriteDelay
-        onTriggered: root._flush()
-    }
-
-    FileView {
-        id: dataFile
-
+        name: "plugin settings"
         path: root._dataWanted ? AppPaths.pluginSettingsFile : ""
-        blockLoading: true
-        blockWrites: true
-        atomicWrites: true
-        printErrors: false
+        interval: EditorMetrics.pluginWriteDelay
+        serialize: () => JSON.stringify(root._data || {}, null, 2)
     }
 
     Component {
-        id: stateFileComponent
+        id: stateStoreComponent
 
-        FileView {
-            blockLoading: true
-            blockWrites: true
-            atomicWrites: true
-            printErrors: false
+        JsonStore {
+            name: "plugin state"
+            interval: EditorMetrics.pluginWriteDelay
         }
     }
 
@@ -357,7 +384,8 @@ Singleton {
         }
     }
 
-    // What plugins get as `editor`. It never reaches the elevated save path.
+    // What plugins get as `editor`. It never reaches the elevated save path. The pane clears
+    // `document.editor` when it is destroyed, so `pane` never holds a dead editor.
     readonly property QtObject editor: QtObject {
         id: editorApi
 
@@ -369,7 +397,15 @@ Singleton {
         // 1-based, as the status bar shows them.
         readonly property int cursorLine: document?.cursorLine ?? 0
         readonly property int cursorColumn: document?.cursorColumn ?? 0
-        readonly property string selectedText: pane?.selectedText ?? ""
+        // Only while a plugin is loaded, since it copies the selection. The version re-reads it after each
+        // edit: the selection can move before the pane's mirror has the edit.
+        readonly property string selectedText: {
+            if (Object.keys(root.loadedPlugins).length === 0 || !pane)
+                return "";
+            const start = pane.selectionStart;
+            const end = pane.selectionEnd;
+            return document.version >= 0 && end > start ? pane.textRange(start, end) : "";
+        }
 
         signal activeDocumentChanged
         signal documentSaved(string path)

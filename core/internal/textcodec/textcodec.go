@@ -98,6 +98,11 @@ type Doc struct {
 	Info
 	Text string
 	Ends []EOL
+	// Fallback is set when ISO-8859-1 was assumed for invalid UTF-8, so the text may be UTF-8 shown as mojibake.
+	// Converting it would double-encode every non-ASCII character.
+	Fallback bool
+	// Lossy is set when writing the text back gives other bytes, so a save would change untouched parts.
+	Lossy bool
 }
 
 // Load detects (or, with a named encoding, applies) the encoding and decodes raw.
@@ -109,13 +114,17 @@ func Load(raw []byte, encodingName string) (Doc, error) {
 	if info.Binary {
 		return Doc{Info: info}, nil
 	}
-	text, err := decodeRaw(raw, info)
+	text, lossy, err := decodeRaw(raw, info)
 	if err != nil {
 		return Doc{}, err
 	}
+	if strings.IndexByte(text, 0) >= 0 {
+		info.Binary = true
+		return Doc{Info: info}, nil
+	}
 	text, ends, counts := splitEOL(text, true)
 	info.EOL, info.Mixed = dominant(counts)
-	doc := Doc{Info: info, Text: text}
+	doc := Doc{Info: info, Text: text, Lossy: lossy, Fallback: encodingName == "" && info.Encoding == Latin1}
 	if info.Mixed {
 		doc.Ends = ends
 	}
@@ -188,41 +197,58 @@ func bomFor(encodingName string) []byte {
 
 func HasBOM(encodingName string) bool { return bomFor(encodingName) != nil }
 
-func decodeRaw(raw []byte, info Info) (string, error) {
+func decodeRaw(raw []byte, info Info) (string, bool, error) {
 	if bom := bomFor(info.Encoding); info.BOM && bytes.HasPrefix(raw, bom) {
 		raw = raw[len(bom):]
 	}
 	switch info.Encoding {
 	case UTF8:
 		if !utf8.Valid(raw) {
-			return "", ErrInvalid
+			return "", false, ErrInvalid
 		}
-		return string(raw), nil
+		return string(raw), false, nil
 	case UTF16LE, UTF16BE:
-		return decodeUTF16(raw, info.Encoding == UTF16BE)
+		text, err := decodeUTF16(raw, info.Encoding == UTF16BE)
+		return text, false, err
 	case Latin1:
-		runes := make([]rune, len(raw))
-		for i, b := range raw {
-			runes[i] = rune(b)
-		}
-		return string(runes), nil
+		return decodeLatin1(raw), false, nil
 	}
 	enc, err := named(info.Encoding)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	out, err := enc.NewDecoder().Bytes(raw)
 	if err != nil {
-		return "", ErrInvalid
+		return "", false, ErrInvalid
 	}
+	back, err := enc.NewEncoder().Bytes(out)
+	switch {
+	case err == nil && bytes.Equal(back, raw):
+		return string(out), false, nil
 	// These decoders turn bytes the encoding does not define into U+FFFD without an error.
-	if bytes.ContainsRune(out, utf8.RuneError) {
-		back, err := enc.NewEncoder().Bytes(out)
-		if err != nil || !bytes.Equal(back, raw) {
-			return "", ErrInvalid
+	case bytes.ContainsRune(out, utf8.RuneError):
+		return "", false, ErrInvalid
+	}
+	return string(out), true, nil
+}
+
+func decodeLatin1(raw []byte) string {
+	high := 0
+	for _, b := range raw {
+		if b >= utf8.RuneSelf {
+			high++
 		}
 	}
-	return string(out), nil
+	var sb strings.Builder
+	sb.Grow(len(raw) + high)
+	for _, b := range raw {
+		if b < utf8.RuneSelf {
+			sb.WriteByte(b)
+			continue
+		}
+		sb.WriteRune(rune(b))
+	}
+	return sb.String()
 }
 
 // Lone surrogates cannot live in a Go string, so a file with one is refused rather than silently changed.

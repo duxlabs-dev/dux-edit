@@ -20,10 +20,21 @@ QtObject {
     property bool loaded: false
     // Unloaded with the window but still open in core: its unsaved edits are in no swap.
     property bool held: false
+    // A close that keeps the swap is in flight; a load waits for it in queuedLoad.
+    property bool closing: false
+    property var queuedLoad: null
+    // The core could not write this document's swap, so its unsaved edits live only in the core's memory.
+    property bool swapFailed: false
+    // The file was on disk when it was last opened or saved.
+    property bool existed: false
+    // Its tab is gone; destroyed once the request in flight has answered.
+    property bool orphaned: false
 
     property int version: 0
     property int savedVersion: 0
     property bool recoveredDirty: false
+    // Opened from a list of past files: a missing file closes the tab instead of starting a new file.
+    property bool mustExist: false
     readonly property bool dirty: version !== savedVersion || recoveredDirty
     readonly property bool isDraft: path === ""
 
@@ -32,6 +43,9 @@ QtObject {
     // "lf" | "crlf" | "cr"
     property string eol: "lf"
     property bool mixedEol: false
+    // The file was not valid UTF-8 and was read as ISO-8859-1, which may not be what it is.
+    property bool encodingGuessed: false
+    // Its encoding cannot write the file's bytes back; a save has to convert it.
     property bool readOnly: false
     property bool writable: true
     property bool elevated: false
@@ -45,6 +59,14 @@ QtObject {
     readonly property bool isMarkdown: lexer === "markdown"
     // The language the user picked for this path, "" for detection. Kept in the session and reapplied on load.
     property string lexerOverride: ""
+    // "" follows the wrap setting, "on" or "off" is this tab's own choice. Kept in the session.
+    property string wrapOverride: ""
+    // From .editorconfig or the file itself: "tab" | "space" | "" for the settings, and 0 for unset.
+    property string indentStyle: ""
+    property int indentWidth: 0
+
+    property int lastUsed: 0
+    property bool readOnlyNoticeDismissed: false
 
     // "" | "modified" | "deleted": the file changed on disk under unsaved edits.
     property string conflict: ""
@@ -97,14 +119,19 @@ QtObject {
         bom = result.bom;
         eol = result.eol;
         mixedEol = result.mixedEol;
-        readOnly = result.readOnly;
+        readOnly = result.readOnly === true;
+        indentStyle = result.indentStyle || "";
+        indentWidth = result.indentWidth || 0;
+        encodingGuessed = result.encodingGuessed === true;
         writable = result.writable;
         elevated = result.elevated;
         recoverable = result.recoverable !== false;
         version = result.version;
         savedVersion = result.version;
         recoveredDirty = result.dirty;
-        conflict = result.conflict || "";
+        conflict = result.conflict || (result.missing && existed ? "deleted" : "");
+        existed = existed || (result.path !== "" && !result.missing);
+        swapFailed = false;
         loaded = true;
         textLoaded(result.text);
     }
@@ -114,8 +141,15 @@ QtObject {
         if (loading)
             return;
         loading = true;
+        if (closing) {
+            queuedLoad = {
+                "options": options,
+                "callback": callback
+            };
+            return;
+        }
         if (held) {
-            reattach(options, callback);
+            reattach(options, callback, false);
             return;
         }
         const params = Object.assign({
@@ -124,30 +158,119 @@ QtObject {
         }, options || {});
         Backend.call("doc.open", params, result => {
             root.loading = false;
-            if (result.ok)
+            if (result.ok && !root.orphaned)
                 root.applyOpenResult(result);
             callback?.(result);
+            root.settle();
         });
     }
 
+    // Removing a tab must not destroy a document a reply is still going to write to.
+    function release() {
+        if (loading || closing) {
+            orphaned = true;
+            return;
+        }
+        destroy();
+    }
+
+    function settle() {
+        if (orphaned && !loading && !closing)
+            destroy();
+    }
+
+    // The document stays open in core, which gets the pane's text first.
     function hold() {
+        if (editor && dirty)
+            resync(null, false);
         held = true;
         loaded = false;
     }
 
-    // The core kept the text and its version; only the pane needs it back.
-    function reattach(options, callback) {
-        Backend.call("doc.text", {
-            "docId": docId,
+    // Closes the document in core with its unsaved edits in the swap. The pane's text is taken now and sent first if
+    // the core's copy is stale. done hears whether the core let go.
+    function stash(saveFirst, done) {
+        const id = docId;
+        const params = {
+            "docId": id,
+            "discard": false,
             "version": version
-        }, result => {
+        };
+        const text = dirty && editor ? editor.getText() : null;
+        if (text !== null)
+            params.md5 = Qt.md5(text);
+        const finish = result => {
+            const closed = result.ok === true || result.code === "NODOC";
+            root.closing = false;
+            root.swapFailed = !closed;
+            if (closed) {
+                root.docId = "";
+                root.held = false;
+            }
+            done?.(closed);
+            const queued = root.queuedLoad;
+            root.queuedLoad = null;
+            if (queued && !root.orphaned) {
+                root.loading = false;
+                root.load(queued.options, queued.callback);
+            }
+            root.settle();
+        };
+        const send = () => Backend.call("doc.close", params, result => {
+                if (result.code !== "DESYNC" || text === null) {
+                    finish(result);
+                    return;
+                }
+                Backend.call("doc.reset", {
+                    "docId": id,
+                    "version": params.version,
+                    "text": text
+                }, () => Backend.call("doc.close", params, finish));
+            });
+        Highlight.forget(id);
+        Spell.forget(id);
+        if (saveFirst && !saving)
+            save({}, result => {
+                if (result.ok)
+                    root.autoSaved = true;
+                send();
+            });
+        else
+            send();
+        loaded = false;
+        held = true;
+        closing = true;
+    }
+
+    // The core kept the text and its version; only the pane needs it back.
+    function reattach(options, callback, anyVersion) {
+        const params = {
+            "docId": docId
+        };
+        if (!anyVersion)
+            params.version = version;
+        Backend.call("doc.text", params, result => {
+            if (result.code === "DESYNC" && !anyVersion) {
+                // The core's copy is the only one left, so it is taken as it stands.
+                root.reattach(options, callback, true);
+                return;
+            }
             root.loading = false;
+            if (result.error || root.orphaned) {
+                callback?.(result);
+                root.settle();
+                return;
+            }
             root.held = false;
             if (!result.ok) {
                 // The core no longer has it, so what is on disk is all there is.
                 root.docId = "";
                 root.load(options, callback);
                 return;
+            }
+            if (result.version !== root.version) {
+                root.version = result.version;
+                root.recoveredDirty = true;
             }
             root.loaded = true;
             root.textLoaded(result.text);
@@ -166,16 +289,18 @@ QtObject {
             "text": text,
             "length": length
         });
+        Documents.noteEdit(root);
     }
 
-    // After a "resync" event or a DESYNC save: the pane's text is the truth.
-    function resync(callback) {
+    // After a "resync" event or a DESYNC save the pane's text wins; conflict means the file changed on disk under it.
+    function resync(callback, conflict) {
         if (!editor)
             return;
         Backend.call("doc.reset", {
             "docId": docId,
             "version": version,
-            "text": editor.getText()
+            "text": editor.getText(),
+            "conflict": conflict === true
         }, result => callback?.(result));
     }
 
@@ -203,6 +328,9 @@ QtObject {
                 root.savedVersion = result.version;
                 root.recoveredDirty = false;
                 root.conflict = "";
+                root.existed = true;
+                root.readOnly = false;
+                root.encodingGuessed = root.encodingGuessed && result.encoding === "iso-8859-1";
                 root.saved();
             }
             callback?.(result);
@@ -219,7 +347,7 @@ QtObject {
             if (result.ok && root.version !== sent) {
                 // Typed while the reload was in flight: the pane's text wins and the core takes it back.
                 root.conflict = "modified";
-                root.resync(null);
+                root.resync(null, true);
             } else if (result.ok) {
                 root.applyOpenResult(result);
             }

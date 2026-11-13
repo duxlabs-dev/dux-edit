@@ -25,6 +25,8 @@ Rectangle {
     property string error: ""
     // Set by typing in the query: the next answer selects the match nearest the cursor.
     property bool jumpOnResult: false
+    // Find next (1) or previous (-1) asked for before the matches arrived.
+    property int pendingStep: 0
     property int requestSeq: 0
 
     readonly property var options: ({
@@ -54,8 +56,23 @@ Rectangle {
         query();
     }
 
+    // Find next or previous from the editor, keeping the focus there. False without a query.
+    function search(forward) {
+        if (findField.text === "")
+            return false;
+        if (opened) {
+            step(forward);
+            return true;
+        }
+        opened = true;
+        pendingStep = forward ? 1 : -1;
+        query();
+        return true;
+    }
+
     function close() {
         opened = false;
+        pendingStep = 0;
         requestSeq++;
         queryTimer.stop();
         matches = [];
@@ -96,9 +113,13 @@ Rectangle {
         total = count;
         capped = isCapped;
         const jump = jumpOnResult;
+        const pending = pendingStep;
         jumpOnResult = false;
+        pendingStep = 0;
         current = matchAtSelection();
-        if (jump && current < 0 && matchCount > 0)
+        if (pending !== 0 && matchCount > 0)
+            step(pending > 0);
+        else if (jump && current < 0 && matchCount > 0)
             select(firstFrom(editor.cursorPosition) % matchCount);
         matchesUpdated();
     }
@@ -149,14 +170,18 @@ Rectangle {
             return;
         const end = change.start + change.removed;
         const delta = change.text.length - change.removed;
-        const kept = [];
-        for (let i = 0; i + 1 < matches.length; i += 2) {
-            if (matches[i] + matches[i + 1] <= change.start)
-                kept.push(matches[i], matches[i + 1]);
-            else if (matches[i] >= end)
-                kept.push(matches[i] + delta, matches[i + 1]);
+        const shifted = matches;
+        let kept = 0;
+        for (let i = 0; i + 1 < shifted.length; i += 2) {
+            const start = shifted[i];
+            const length = shifted[i + 1];
+            if (start + length > change.start && start < end)
+                continue;
+            shifted[kept++] = start + length <= change.start ? start : start + delta;
+            shifted[kept++] = length;
         }
-        matches = kept;
+        if (kept < shifted.length)
+            matches = shifted.slice(0, kept);
         current = -1;
         queryTimer.restart();
     }

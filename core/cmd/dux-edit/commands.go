@@ -12,6 +12,9 @@ var rootCmd = &cobra.Command{
 	Long: `Without arguments ` + appID + ` shows its window and starts the app first when it is not running.
 Files open as tabs in the running app.
 
+The first file can open at a line and column: ` + appID + ` file:LINE[:COL], ` + appID + ` +LINE[:COL] file,
+or --line and --column. A file whose name really ends in :LINE is opened as named.
+
 A file named like a command (run, kill, ipc, qs, version, helper, import-dms-notes, ...) needs a path: ` + appID + ` ./run`,
 	Args:          cobra.ArbitraryArgs,
 	SilenceErrors: true,

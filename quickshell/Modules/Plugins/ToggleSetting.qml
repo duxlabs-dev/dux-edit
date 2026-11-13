@@ -15,15 +15,10 @@ DToggle {
     checked: value
 
     function loadValue() {
-        const settings = SettingsLookup.find(root.parent);
-        if (settings)
-            value = settings.loadValue(settingKey, defaultValue);
+        SettingsLookup.load(root);
     }
 
     Component.onCompleted: loadValue()
 
-    onToggled: isChecked => {
-        value = isChecked;
-        SettingsLookup.find(root.parent)?.saveValue(settingKey, isChecked);
-    }
+    onToggled: isChecked => SettingsLookup.save(root, isChecked)
 }

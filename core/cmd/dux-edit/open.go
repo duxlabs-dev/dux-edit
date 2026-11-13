@@ -5,7 +5,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 
+	"github.com/duxlabs-dev/dux-go/log"
 	"github.com/spf13/cobra"
 
 	"github.com/duxlabs-dev/dux-edit/core/internal/backend"
@@ -20,31 +23,109 @@ var openFlags struct {
 	newInstance bool
 }
 
+var (
+	fileLineColArg = regexp.MustCompile(`^(.+):(\d+):(\d+):?$`)
+	fileLineArg    = regexp.MustCompile(`^(.+):(\d+):?$`)
+	plusLineArg    = regexp.MustCompile(`^\+(\d+)(?::(\d+))?$`)
+)
+
+func position(line, column string) (int, int, bool) {
+	l, err := strconv.Atoi(line)
+	if err != nil || l < 1 {
+		return 0, 0, false
+	}
+	c, _ := strconv.Atoi(column)
+	return l, max(c, 0), true
+}
+
+func existsLiterally(arg string) bool {
+	_, err := os.Lstat(arg)
+	return err == nil
+}
+
+// splitFileArg reads file:LINE[:COL]; a trailing colon, as compilers print it, is accepted.
+func splitFileArg(arg string) (string, int, int) {
+	if existsLiterally(arg) {
+		return arg, 0, 0
+	}
+	type reading struct {
+		path         string
+		line, column int
+	}
+	var readings []reading
+	if m := fileLineColArg.FindStringSubmatch(arg); m != nil {
+		if line, column, ok := position(m[2], m[3]); ok {
+			readings = append(readings, reading{m[1], line, column})
+		}
+	}
+	if m := fileLineArg.FindStringSubmatch(arg); m != nil {
+		if line, _, ok := position(m[2], ""); ok {
+			readings = append(readings, reading{m[1], line, 0})
+		}
+	}
+	if len(readings) == 0 {
+		return arg, 0, 0
+	}
+	pick := readings[0]
+	for _, r := range readings {
+		if existsLiterally(r.path) {
+			pick = r
+			break
+		}
+	}
+	return pick.path, pick.line, pick.column
+}
+
+func plusPosition(arg string) (int, int, bool) {
+	m := plusLineArg.FindStringSubmatch(arg)
+	if m == nil || existsLiterally(arg) {
+		return 0, 0, false
+	}
+	return position(m[1], m[2])
+}
+
 // Paths resolve against the caller's working directory, which the running app does not share.
+// The position goes to the first file: --line wins over +LINE, which wins over file:LINE.
 func openParams(args []string) (map[string]any, error) {
 	paths := make([]string, 0, len(args))
+	line, column := openFlags.line, openFlags.column
+	plusLine, plusColumn := 0, 0
 	for _, arg := range args {
-		abs, err := filepath.Abs(arg)
+		if l, c, ok := plusPosition(arg); ok {
+			plusLine, plusColumn = l, c
+			continue
+		}
+		path, l, c := splitFileArg(arg)
+		abs, err := filepath.Abs(path)
 		if err != nil {
 			return nil, err
 		}
+		switch {
+		case len(paths) == 0 && line == 0:
+			line, column = l, c
+		case len(paths) > 0 && l > 0:
+			log.Warnf("%s: only the first file opens at a line", arg)
+		}
 		paths = append(paths, abs)
+	}
+	if openFlags.line == 0 && plusLine > 0 {
+		line, column = plusLine, plusColumn
 	}
 	return map[string]any{
 		"paths":  paths,
-		"line":   openFlags.line,
-		"column": openFlags.column,
+		"line":   line,
+		"column": column,
 		"simple": openFlags.simple,
 	}, nil
 }
 
 func openFiles(args []string) error {
-	if len(args) == 0 && !openFlags.simple && !openFlags.newInstance {
-		return shellApp.CallOrLaunch("ui.show", nil)
-	}
 	params, err := openParams(args)
 	if err != nil {
 		return err
+	}
+	if len(params["paths"].([]string)) == 0 && !openFlags.simple && !openFlags.newInstance {
+		return shellApp.CallOrLaunch("ui.show", nil)
 	}
 	if !openFlags.newInstance {
 		return shellApp.CallOrLaunch("ui.open", params)

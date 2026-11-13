@@ -42,6 +42,13 @@
     "comment": ""
   },
   {
+    "term": "%1 goes back to the version on disk. Your unsaved changes are lost.",
+    "translation": "",
+    "context": "dialog message; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "%1 is %2 MB. Large files use a lot of memory and open without highlighting.",
     "translation": "",
     "context": "dialog message; %1 is a file name, %2 a size",
@@ -77,6 +84,13 @@
     "comment": ""
   },
   {
+    "term": "%1 no longer exists.",
+    "translation": "",
+    "context": "error opening a recent file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "%1 of %2 characters",
     "translation": "",
     "context": "status bar selected and total characters",
@@ -98,6 +112,13 @@
     "comment": ""
   },
   {
+    "term": "%1 words",
+    "translation": "",
+    "context": "status bar word count; %1 is a number",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "%1/%2",
     "translation": "",
     "context": "find bar counter, current match and total",
@@ -108,6 +129,13 @@
     "term": "1 document has unsaved changes from an earlier session.",
     "translation": "",
     "context": "recovery notice",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "1 word",
+    "translation": "",
+    "context": "status bar word count",
     "reference": "",
     "comment": ""
   },
@@ -182,6 +210,13 @@
     "comment": ""
   },
   {
+    "term": "Appearance",
+    "translation": "",
+    "context": "settings category",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Apply",
     "translation": "",
     "context": "button that applies a color",
@@ -238,9 +273,16 @@
     "comment": ""
   },
   {
+    "term": "Autosave, session and closing the window",
+    "translation": "",
+    "context": "settings category description",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Back",
     "translation": "",
-    "context": "tooltip on the button leaving the settings page",
+    "context": "tooltip on the button leaving a settings page",
     "reference": "",
     "comment": ""
   },
@@ -287,9 +329,23 @@
     "comment": ""
   },
   {
+    "term": "Change Case",
+    "translation": "",
+    "context": "editor context menu, submenu",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Change Color",
     "translation": "",
     "context": "tooltip on a syntax color swatch",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Changes and Errors",
+    "translation": "",
+    "context": "syntax color group",
     "reference": "",
     "comment": ""
   },
@@ -308,9 +364,23 @@
     "comment": ""
   },
   {
+    "term": "Clear Recent",
+    "translation": "",
+    "context": "menu item that forgets the recent files",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Close",
     "translation": "",
-    "context": "find bar button",
+    "context": "find bar button | tab menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Close Others",
+    "translation": "",
+    "context": "tab menu item",
     "reference": "",
     "comment": ""
   },
@@ -329,9 +399,23 @@
     "comment": ""
   },
   {
+    "term": "Close to the Right",
+    "translation": "",
+    "context": "tab menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Closing the Window",
     "translation": "",
     "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Code",
+    "translation": "",
+    "context": "syntax color group",
     "reference": "",
     "comment": ""
   },
@@ -345,7 +429,14 @@
   {
     "term": "Colors",
     "translation": "",
-    "context": "setting name",
+    "context": "setting name | settings section",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Colors follow the theme until you change them.",
+    "translation": "",
+    "context": "setting description",
     "reference": "",
     "comment": ""
   },
@@ -371,6 +462,13 @@
     "comment": ""
   },
   {
+    "term": "Copy All",
+    "translation": "",
+    "context": "window menu item that copies the whole document",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Copy HTML",
     "translation": "",
     "context": "markdown preview button",
@@ -380,7 +478,7 @@
   {
     "term": "Copy Path",
     "translation": "",
-    "context": "tooltip on the status bar path",
+    "context": "tab menu item | tooltip on the status bar path",
     "reference": "",
     "comment": ""
   },
@@ -395,6 +493,13 @@
     "term": "Copy the tabs and settings of the DMS notepad.",
     "translation": "",
     "context": "setting description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Copy the whole document",
+    "translation": "",
+    "context": "shortcut description",
     "reference": "",
     "comment": ""
   },
@@ -423,6 +528,20 @@
     "term": "Could not save %1. Try again.",
     "translation": "",
     "context": "error saving a file; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Count Words",
+    "translation": "",
+    "context": "tooltip on the status bar counts",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Custom Colors",
+    "translation": "",
+    "context": "setting name",
     "reference": "",
     "comment": ""
   },
@@ -469,9 +588,44 @@
     "comment": ""
   },
   {
+    "term": "Delete Line",
+    "translation": "",
+    "context": "window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Delete Lines",
+    "translation": "",
+    "context": "editor context menu action",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Delete line",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Deleted Line",
     "translation": "",
     "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Discard Changes",
+    "translation": "",
+    "context": "button that drops unsaved edits and reloads the file",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Discard Changes…",
+    "translation": "",
+    "context": "window menu item that reloads the file and drops unsaved edits",
     "reference": "",
     "comment": ""
   },
@@ -504,6 +658,27 @@
     "comment": ""
   },
   {
+    "term": "Duplicate",
+    "translation": "",
+    "context": "editor context menu, duplicate the line or selection",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Duplicate Line",
+    "translation": "",
+    "context": "window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Duplicate line",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Dux Edit",
     "translation": "",
     "context": "application name",
@@ -532,6 +707,20 @@
     "comment": ""
   },
   {
+    "term": "Dux Edit lost the connection to its core. Copy your unsaved work elsewhere before closing.",
+    "translation": "",
+    "context": "error when the window is closed while nothing can be saved",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Dux Edit lost the connection to its core. Nothing can be saved: copy your unsaved work elsewhere, then restart the app.",
+    "translation": "",
+    "context": "banner shown when the backend process died",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Dux Shell",
     "translation": "",
     "context": "color source",
@@ -546,9 +735,23 @@
     "comment": ""
   },
   {
+    "term": "Edit",
+    "translation": "",
+    "context": "shortcut group",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Edit Anyway",
+    "translation": "",
+    "context": "banner button that allows editing a file the user cannot write",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Editor",
     "translation": "",
-    "context": "settings section",
+    "context": "settings category",
     "reference": "",
     "comment": ""
   },
@@ -581,9 +784,16 @@
     "comment": ""
   },
   {
+    "term": "Every shortcut, searchable",
+    "translation": "",
+    "context": "settings category description",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Files",
     "translation": "",
-    "context": "settings section",
+    "context": "settings category | shortcut group",
     "reference": "",
     "comment": ""
   },
@@ -595,9 +805,37 @@
     "comment": ""
   },
   {
+    "term": "Find and Navigate",
+    "translation": "",
+    "context": "shortcut group",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Find next",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Find previous",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Follow System",
     "translation": "",
     "context": "spellcheck language | theme mode",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Font",
+    "translation": "",
+    "context": "settings section",
     "reference": "",
     "comment": ""
   },
@@ -612,6 +850,27 @@
     "term": "Font Size",
     "translation": "",
     "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Font, line numbers, wrapping and indentation",
+    "translation": "",
+    "context": "settings category description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Full Screen",
+    "translation": "",
+    "context": "window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Full screen",
+    "translation": "",
+    "context": "shortcut description",
     "reference": "",
     "comment": ""
   },
@@ -651,6 +910,27 @@
     "comment": ""
   },
   {
+    "term": "Go to tab 1 to 8",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Go to the first character of the line, then its start",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Go to the last tab",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Green",
     "translation": "",
     "context": "color palette name",
@@ -679,9 +959,16 @@
     "comment": ""
   },
   {
+    "term": "Highlight Current Line",
+    "translation": "",
+    "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Highlighting",
     "translation": "",
-    "context": "settings section",
+    "context": "settings category",
     "reference": "",
     "comment": ""
   },
@@ -709,7 +996,7 @@
   {
     "term": "Import",
     "translation": "",
-    "context": "button that imports DMS notes",
+    "context": "button that imports DMS notes | settings section",
     "reference": "",
     "comment": ""
   },
@@ -724,6 +1011,13 @@
     "term": "Imported %1 DMS notes.",
     "translation": "",
     "context": "notice; %1 is a count",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Indent",
+    "translation": "",
+    "context": "editor context menu action",
     "reference": "",
     "comment": ""
   },
@@ -756,9 +1050,30 @@
     "comment": ""
   },
   {
+    "term": "Installed plugins and their settings",
+    "translation": "",
+    "context": "settings category description",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Invalid regular expression",
     "translation": "",
     "context": "find bar error",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Join Lines",
+    "translation": "",
+    "context": "editor context menu action | window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Join lines",
+    "translation": "",
+    "context": "shortcut description",
     "reference": "",
     "comment": ""
   },
@@ -779,7 +1094,7 @@
   {
     "term": "Keyboard Shortcuts",
     "translation": "",
-    "context": "settings section",
+    "context": "settings category",
     "reference": "",
     "comment": ""
   },
@@ -794,6 +1109,13 @@
     "term": "Language",
     "translation": "",
     "context": "setting name | tooltip on the status bar language",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Language and what gets checked",
+    "translation": "",
+    "context": "settings category description",
     "reference": "",
     "comment": ""
   },
@@ -826,6 +1148,20 @@
     "comment": ""
   },
   {
+    "term": "Lines",
+    "translation": "",
+    "context": "editor context menu, submenu of line actions | shortcut group",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Lines and Case",
+    "translation": "",
+    "context": "window menu item opening line and letter case commands",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Link",
     "translation": "",
     "context": "syntax role",
@@ -847,9 +1183,23 @@
     "comment": ""
   },
   {
+    "term": "Markdown",
+    "translation": "",
+    "context": "settings section",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Markdown Preview",
     "translation": "",
     "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Markup",
+    "translation": "",
+    "context": "syntax color group",
     "reference": "",
     "comment": ""
   },
@@ -892,6 +1242,62 @@
     "term": "Monospace Font",
     "translation": "",
     "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Move Down",
+    "translation": "",
+    "context": "editor context menu, move lines down",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Move Lines Down",
+    "translation": "",
+    "context": "window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Move Lines Up",
+    "translation": "",
+    "context": "window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Move Up",
+    "translation": "",
+    "context": "editor context menu, move lines up",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Move lines down",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Move lines up",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Move tab left",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Move tab right",
+    "translation": "",
+    "context": "shortcut description",
     "reference": "",
     "comment": ""
   },
@@ -973,6 +1379,13 @@
     "comment": ""
   },
   {
+    "term": "No shortcuts match.",
+    "translation": "",
+    "context": "empty state of the shortcut search",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "No suggestions",
     "translation": "",
     "context": "spelling menu",
@@ -987,6 +1400,13 @@
     "comment": ""
   },
   {
+    "term": "Not Writable",
+    "translation": "",
+    "context": "status bar state of a file the user may not write",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Number",
     "translation": "",
     "context": "syntax role",
@@ -997,6 +1417,13 @@
     "term": "OK",
     "translation": "",
     "context": "dialog button that confirms",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "OVR",
+    "translation": "",
+    "context": "status bar marker for overwrite mode; keep it short",
     "reference": "",
     "comment": ""
   },
@@ -1018,6 +1445,13 @@
     "term": "Open Large File?",
     "translation": "",
     "context": "dialog title",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Open Recent",
+    "translation": "",
+    "context": "window menu item",
     "reference": "",
     "comment": ""
   },
@@ -1087,7 +1521,7 @@
   {
     "term": "Plugins",
     "translation": "",
-    "context": "settings section",
+    "context": "settings category | shortcut group",
     "reference": "",
     "comment": ""
   },
@@ -1155,6 +1589,13 @@
     "comment": ""
   },
   {
+    "term": "Quit",
+    "translation": "",
+    "context": "shortcut description | window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Quits Dux Edit",
     "translation": "",
     "context": "close behavior",
@@ -1162,9 +1603,30 @@
     "comment": ""
   },
   {
+    "term": "Read-Only",
+    "translation": "",
+    "context": "status bar state of a document that cannot be edited as it is",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Read-only: this file's encoding cannot write some of its bytes back. Save it as UTF-8 to edit it.",
+    "translation": "",
+    "context": "banner message for a file opened read-only because of its encoding",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Red",
     "translation": "",
     "context": "color palette name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Redo",
+    "translation": "",
+    "context": "edit menu action | shortcut description | window menu item",
     "reference": "",
     "comment": ""
   },
@@ -1204,9 +1666,30 @@
     "comment": ""
   },
   {
+    "term": "Rename…",
+    "translation": "",
+    "context": "tab menu item that names an unsaved document",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Reopen",
     "translation": "",
     "context": "button that reopens a file with another encoding",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Reopen Closed Tab",
+    "translation": "",
+    "context": "tab menu item | window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Reopen closed tab",
+    "translation": "",
+    "context": "shortcut description",
     "reference": "",
     "comment": ""
   },
@@ -1274,6 +1757,13 @@
     "comment": ""
   },
   {
+    "term": "Reset All",
+    "translation": "",
+    "context": "button that drops every custom syntax color",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Reset zoom",
     "translation": "",
     "context": "shortcut description",
@@ -1311,7 +1801,7 @@
   {
     "term": "Save As…",
     "translation": "",
-    "context": "window menu item",
+    "context": "banner button that saves the document under another name | window menu item",
     "reference": "",
     "comment": ""
   },
@@ -1344,6 +1834,13 @@
     "comment": ""
   },
   {
+    "term": "Save as UTF-8…",
+    "translation": "",
+    "context": "banner button that saves a copy of a file in UTF-8",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Save files two seconds after the last edit.",
     "translation": "",
     "context": "setting description",
@@ -1372,6 +1869,13 @@
     "comment": ""
   },
   {
+    "term": "Search shortcuts",
+    "translation": "",
+    "context": "placeholder of the shortcut search field",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Select All",
     "translation": "",
     "context": "edit menu action",
@@ -1379,9 +1883,30 @@
     "comment": ""
   },
   {
+    "term": "Select Line",
+    "translation": "",
+    "context": "editor context menu action | window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Select line",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Settings",
     "translation": "",
     "context": "settings page title | shortcut description | window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Show Why",
+    "translation": "",
+    "context": "tooltip on the status bar read-only state",
     "reference": "",
     "comment": ""
   },
@@ -1407,16 +1932,23 @@
     "comment": ""
   },
   {
-    "term": "Simple hides the status details, line numbers and a lone tab.",
+    "term": "Simple hides the status details, line numbers and a lone tab, and centers wrapped text.",
     "translation": "",
     "context": "setting description",
     "reference": "",
     "comment": ""
   },
   {
+    "term": "Sort Lines",
+    "translation": "",
+    "context": "editor context menu action | window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Spellcheck",
     "translation": "",
-    "context": "settings section",
+    "context": "settings category",
     "reference": "",
     "comment": ""
   },
@@ -1456,9 +1988,23 @@
     "comment": ""
   },
   {
+    "term": "Syntax highlighting and its colors",
+    "translation": "",
+    "context": "settings category description",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Tab Width",
     "translation": "",
     "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Tabs",
+    "translation": "",
+    "context": "shortcut group",
     "reference": "",
     "comment": ""
   },
@@ -1472,7 +2018,7 @@
   {
     "term": "Text",
     "translation": "",
-    "context": "syntax role",
+    "context": "settings section | syntax role",
     "reference": "",
     "comment": ""
   },
@@ -1512,6 +2058,27 @@
     "comment": ""
   },
   {
+    "term": "The unsaved changes in %1 could not be stored for recovery. Quitting discards them.",
+    "translation": "",
+    "context": "dialog message; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "The unsaved changes in %1 could not be stored for recovery. Save the document, or free some disk space.",
+    "translation": "",
+    "context": "error when the crash-recovery copy of a document cannot be written; %1 is a file name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "The unsaved changes in %1 documents could not be stored for recovery. Quitting discards them.",
+    "translation": "",
+    "context": "dialog message; %1 is a count",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Theme",
     "translation": "",
     "context": "setting name",
@@ -1540,9 +2107,65 @@
     "comment": ""
   },
   {
+    "term": "This file was not valid UTF-8 and was read as ISO-8859-1. Saving as UTF-8 rewrites every accented character as it is shown now.",
+    "translation": "",
+    "context": "warning added to a dialog when the encoding of a file was guessed",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Title Case",
+    "translation": "",
+    "context": "editor context menu, change case | window menu item that capitalizes each word of the selection",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Toggle overwrite mode",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Toggle word wrap for this document",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Type",
     "translation": "",
     "context": "syntax role",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "UPPER CASE",
+    "translation": "",
+    "context": "editor context menu, change case",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "UPPERCASE",
+    "translation": "",
+    "context": "window menu item that changes the selection to upper case",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Undo",
+    "translation": "",
+    "context": "edit menu action | shortcut description | window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Unindent",
+    "translation": "",
+    "context": "editor context menu action",
     "reference": "",
     "comment": ""
   },
@@ -1591,7 +2214,14 @@
   {
     "term": "View",
     "translation": "",
-    "context": "settings section",
+    "context": "settings section | shortcut group",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "View mode, theme and colors",
+    "translation": "",
+    "context": "settings category description",
     "reference": "",
     "comment": ""
   },
@@ -1603,9 +2233,23 @@
     "comment": ""
   },
   {
+    "term": "Word Wrap",
+    "translation": "",
+    "context": "window menu item",
+    "reference": "",
+    "comment": ""
+  },
+  {
     "term": "Wrap Lines",
     "translation": "",
     "context": "setting name",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "You do not have permission to change this file.",
+    "translation": "",
+    "context": "banner message for a file the user cannot write",
     "reference": "",
     "comment": ""
   },
@@ -1631,9 +2275,30 @@
     "comment": ""
   },
   {
-    "term": "Zoom in and out",
+    "term": "Zoom in",
     "translation": "",
     "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "Zoom out",
+    "translation": "",
+    "context": "shortcut description",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "lower case",
+    "translation": "",
+    "context": "editor context menu, change case",
+    "reference": "",
+    "comment": ""
+  },
+  {
+    "term": "lowercase",
+    "translation": "",
+    "context": "window menu item that changes the selection to lower case",
     "reference": "",
     "comment": ""
   }

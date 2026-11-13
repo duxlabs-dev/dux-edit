@@ -13,6 +13,12 @@ A plugin is arbitrary QML that runs with your user's privileges. Manifest permis
 
 When both hold the same `id`, the one in your config directory wins. Dux Edit never watches these folders: it scans them when the Plugins settings section opens, when you press Rescan, and at startup when at least one plugin is enabled. Enabling a plugin in settings loads it at once; disabling destroys it.
 
+## Lifecycle
+
+A plugin is loaded only while the window is open. When Dux Edit hides its window and keeps running in the background, every plugin is destroyed, along with its timers, processes and contributions; when the window comes back, the enabled plugins are created again from scratch. Nothing in a plugin runs while the window is hidden.
+
+Keep anything that must outlive this through `pluginService`: data and state saved there are written to disk before the plugin is destroyed. Save as values change rather than on exit, and read them back in `Component.onCompleted`. Properties of the plugin object itself start over each time.
+
 ## Manifest
 
 ```json
@@ -57,7 +63,7 @@ Component paths are relative to the plugin folder and must stay inside it. A man
 
 ### Contributions
 
-- `commands: [{id, title, icon, shortcut, run}]`: shown in the window menu. `run` is a function. `shortcut` is a key sequence such as `"Ctrl+Alt+D"`.
+- `commands: [{id, title, icon, shortcut, run}]`: shown in the window menu, with shortcuts listed in the Shortcuts settings page. `run` is a function. `shortcut` is a key sequence such as `"Ctrl+Alt+D"`.
 - `statusItem: Component`: an item shown in the status bar.
 - `sidePanel: Component`: a panel shown beside the editor.
 

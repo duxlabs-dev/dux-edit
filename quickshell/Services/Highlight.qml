@@ -22,28 +22,19 @@ Singleton {
     readonly property var paletteNames: SyntaxPalette.names(palette)
 
     // docId -> LineMap of flat [col, len, role, ...] arrays. Plain JS so a merge never copies.
-    readonly property var stores: ({})
+    readonly property var stores: LineIndex.createStores(3)
 
     // Emitted once per spans event that changed spans(docId).
     signal spansChanged(string docId)
 
-    function store(docId) {
-        let map = stores[docId];
-        if (!map) {
-            map = LineIndex.createMap();
-            stores[docId] = map;
-        }
-        return map;
-    }
-
     // A LineMap: get(line) returns [col, len, role, ...] or undefined. Columns are UTF-16 units in the line.
     function spans(docId) {
-        return stores[docId] ?? null;
+        return stores.get(docId);
     }
 
     // Tell the core which lines [first, last] are on screen, margin included. Spans outside are dropped.
     function view(doc, first, last) {
-        store(doc.docId).keep(first, last);
+        stores.open(doc.docId).keep(first, last);
         Backend.notify("highlight.view", {
             "docId": doc.docId,
             "first": first,
@@ -74,17 +65,13 @@ Singleton {
         doc.tierReason = state.reason;
     }
 
-    // Shifts stored spans when the pane edits lines, so nothing is drawn at a stale offset. `version` is
-    // the document version the edit produced.
-    function linesEdited(docId, startLine, oldLines, newLines, version) {
-        const map = stores[docId];
-        if (!map)
-            return;
-        map.edit(version ?? Documents.byDocId(docId)?.version ?? 0, startLine, oldLines, newLines);
+    // Shifts stored spans for a pane edit; `change` is LineIndex.applyEdit's result.
+    function linesEdited(docId, version, change) {
+        stores.edited(docId, version, change);
     }
 
     function forget(docId) {
-        delete stores[docId];
+        stores.forget(docId);
     }
 
     Component.onCompleted: {
@@ -96,7 +83,7 @@ Singleton {
             case "spans":
                 if (!event.lines || !Documents.byDocId(event.docId))
                     return;
-                root.store(event.docId).merge(event.version, event.first, event.lines);
+                root.stores.open(event.docId).merge(event.version, event.first, event.lines);
                 root.spansChanged(event.docId);
                 return;
             }

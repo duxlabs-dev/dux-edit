@@ -5,7 +5,9 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,9 +19,17 @@ import (
 )
 
 const (
-	resyncAfter = 2 * time.Second
-	swapAfter   = time.Second
+	resyncAfter  = 2 * time.Second
+	swapAfter    = time.Second
+	swapAfterMax = 15 * time.Second
+	// staleIdentity matches no file, so the next save of a document marked with it is a conflict.
+	staleIdentity = "stale"
 )
+
+// swapDelay grows with the document, since every swap write is the whole text. Hide and quit flush at once.
+func swapDelay(len16 int) time.Duration {
+	return min(max(swapAfter, swapAfter*time.Duration(len16>>20)), swapAfterMax)
+}
 
 type Publisher func(topic string, data any)
 
@@ -34,10 +44,13 @@ type Store struct {
 	nextID    int
 	swapDir   swap.Dir
 	watcher   *watch.Watcher
+	// parked holds the locks of swaps whose documents closed with unsaved edits, so no other instance
+	// offers them for recovery while this one is only hidden.
+	parked map[string]*swap.Lock
 }
 
 func NewStore(publish Publisher) *Store {
-	return &Store{publish: publish, docs: make(map[string]*Doc), watchSource: watch.FSNotify}
+	return &Store{publish: publish, docs: make(map[string]*Doc), parked: make(map[string]*swap.Lock), watchSource: watch.FSNotify}
 }
 
 func (s *Store) SetElevator(e Elevator) { s.elevator = e }
@@ -116,10 +129,14 @@ type Doc struct {
 	writable  bool
 	watchPath string
 
+	// lossy: the encoding does not write this file's bytes back, so a save in it would change text nobody touched.
+	lossy bool
+
 	swapID       string
 	readElevated bool
 	dirty        bool
 	swapStale    bool
+	swapFailed   bool
 	swapTimer    *time.Timer
 	closed       bool
 
@@ -233,16 +250,20 @@ func (s *Store) Open(req OpenRequest) any {
 		swapID = swap.NewID()
 	case !swap.ValidID(swapID):
 		return Fail(CodeNotFound, "")
-	case s.openSwaps()[swapID]:
-		return Fail(CodeLocked, "")
-	case !req.Elevated:
+	default:
+		if fail := s.releaseHolder(swapID); fail != nil {
+			return *fail
+		}
+		if req.Elevated {
+			break
+		}
 		r, fail := s.restoreSwap(swapID)
 		if fail != nil {
 			return *fail
 		}
 		restored = r
 	}
-	if restored != nil && path == "" {
+	if restored != nil && restored.side.Path != "" {
 		path = restored.side.Path
 	}
 	if restored == nil && req.SwapID != "" && path == "" {
@@ -261,16 +282,23 @@ func (s *Store) Open(req OpenRequest) any {
 	}
 	result := OpenResult{OK: true, SwapID: swapID, Path: path, Elevated: req.Elevated, Recoverable: !req.Elevated}
 	text := ""
+	unreadable := false
 	if path != "" {
 		ld, fail := s.load(path, req.Encoding, req.Elevated, req.Force)
-		if fail != nil {
+		switch {
+		case fail == nil:
+			text, d.info, d.ends = ld.doc.Text, ld.doc.Info, ld.doc.Ends
+			d.identity, d.reported, d.lossy = ld.identity, ld.identity, ld.doc.Lossy
+			result.Size, result.Missing = ld.size, ld.missing
+			result.ReadOnly, result.EncodingGuessed = ld.doc.Lossy, ld.doc.Fallback
+		case restored == nil || fail.Code == CodeConfirmLarge:
 			restored.release()
 			return *fail
+		default:
+			unreadable = true
 		}
-		text, d.info, d.ends = ld.doc.Text, ld.doc.Info, ld.doc.Ends
-		d.identity, d.reported, d.writable = ld.identity, ld.identity, ld.writable
+		d.writable = ld.writable
 		d.title = filepath.Base(path)
-		result.Size = ld.size
 	}
 	if restored != nil {
 		if size := int64(len(restored.text)); size > MaxOpenBytes || (!req.Force && size > ConfirmLargeBytes) {
@@ -278,8 +306,15 @@ func (s *Store) Open(req OpenRequest) any {
 			return largeFailure(size)
 		}
 		result.Conflict = restored.apply(d, req.Encoding == "")
-		if d.ends != nil {
-			d.ends = carryEnds(buffer.New(text), buffer.New(restored.text), d.ends, d.info.EOL)
+		if unreadable {
+			result.Conflict = "modified"
+		}
+		fresh := buffer.New(restored.text)
+		switch ends, ok := decodeEnds(restored.side.Ends, fresh.LineCount()); {
+		case ok:
+			d.ends, d.info.Mixed = ends, true
+		case d.ends != nil:
+			d.ends = carryEnds(buffer.New(text), fresh, d.ends, d.info.EOL)
 		}
 		text = restored.text
 		result.Recovered, result.Dirty = true, true
@@ -308,6 +343,7 @@ func (s *Store) Open(req OpenRequest) any {
 	result.EOL = d.info.EOL.String()
 	result.MixedEOL = d.info.Mixed
 	result.Writable = d.writable
+	result.setIndent(path, text)
 	return result
 }
 
@@ -318,12 +354,29 @@ func (s *Store) Edit(docID string, version int64, start, removed int, text strin
 		return
 	}
 	d.mu.Lock()
-	if d.closed || d.desynced || version <= d.version {
+	if d.closed || version <= d.version {
 		d.mu.Unlock()
 		return
 	}
 	d.pending[version] = edit{start: start, removed: removed, text: text, length: length}
-	applied, desync, drain := false, false, false
+	if d.desynced {
+		d.mu.Unlock()
+		return
+	}
+	desync, drain := s.applyPendingLocked(d)
+	d.mu.Unlock()
+
+	if drain {
+		s.drain(d)
+	}
+	if desync {
+		s.resync(d)
+	}
+}
+
+// applyPendingLocked applies the parked edits that follow the mirror's version.
+func (s *Store) applyPendingLocked(d *Doc) (desync, drain bool) {
+	applied := false
 	for {
 		next, ready := d.pending[d.version+1]
 		if !ready {
@@ -354,14 +407,7 @@ func (s *Store) Edit(docID string, version int64, start, removed int, text strin
 	if len(d.pending) > 0 && d.gapTimer == nil {
 		s.armGapLocked(d)
 	}
-	d.mu.Unlock()
-
-	if drain {
-		s.drain(d)
-	}
-	if desync {
-		s.resync(d)
-	}
+	return desync, drain
 }
 
 func (s *Store) resync(d *Doc) {
@@ -400,22 +446,31 @@ func (s *Store) touchLocked(d *Doc) {
 		return
 	}
 	d.swapStale = true
+	delay := swapDelay(d.buf.Len16())
 	if d.swapTimer != nil {
-		d.swapTimer.Reset(swapAfter)
+		d.swapTimer.Reset(delay)
 		return
 	}
-	d.swapTimer = time.AfterFunc(swapAfter, func() { s.flushSwap(d) })
+	d.swapTimer = time.AfterFunc(delay, func() { _ = s.flushSwap(d) })
 }
 
-func (s *Store) Reset(docID string, version int64, text string) any {
+// Reset replaces the mirror with the UI's text at version; conflict marks the file as changed under it.
+func (s *Store) Reset(docID string, version int64, text string, conflict bool) any {
 	d, ok := s.Get(docID)
 	if !ok {
 		return Fail(CodeUnknownDoc, "")
 	}
 	d.mu.Lock()
-	if d.closed {
+	switch {
+	case d.closed:
 		d.mu.Unlock()
 		return Fail(CodeUnknownDoc, "")
+	case version < d.version && !d.desynced:
+		if conflict {
+			d.identity = staleIdentity
+		}
+		d.mu.Unlock()
+		return map[string]any{"ok": true}
 	}
 	fresh := buffer.New(mergeReset(d.buf.Text(), text))
 	if d.ends != nil {
@@ -423,16 +478,27 @@ func (s *Store) Reset(docID string, version int64, text string) any {
 	}
 	d.buf = fresh
 	d.version = version
-	clear(d.pending)
+	for v := range d.pending {
+		if v <= version {
+			delete(d.pending, v)
+		}
+	}
 	d.desynced = false
+	if conflict {
+		d.identity = staleIdentity
+	}
 	d.stopGapLocked()
 	d.bumpLocked()
 	s.touchLocked(d)
 	drain := d.queueLocked(notice{kind: noticeReset})
+	desync, more := s.applyPendingLocked(d)
 	d.mu.Unlock()
 
-	if drain {
+	if drain || more {
 		s.drain(d)
+	}
+	if desync {
+		s.resync(d)
 	}
 	return map[string]any{"ok": true}
 }
@@ -450,46 +516,98 @@ func (s *Store) elevation() string {
 // Elevation reports "available" or the reason elevated saves cannot be offered.
 func (s *Store) Elevation() string { return s.elevation() }
 
-func (s *Store) Close(docID string, discard bool) any {
-	s.mu.Lock()
-	d, ok := s.docs[docID]
-	delete(s.docs, docID)
-	s.mu.Unlock()
+// Close closes a document. A kept one first proves its swap reached disk; otherwise it stays open.
+func (s *Store) Close(ctx context.Context, req CloseRequest) any {
+	d, ok := s.Get(req.DocID)
 	if !ok {
 		return Fail(CodeUnknownDoc, "")
 	}
+	if !req.Discard && d.Await(ctx, req.Version) != nil {
+		return Fail(CodeDesync, "")
+	}
+	return s.closeDoc(d, req.Discard, req.MD5, true)
+}
+
+func (s *Store) closeDoc(d *Doc, discard bool, sum string, verify bool) any {
 	d.saveMu.Lock()
 	defer d.saveMu.Unlock()
 
 	d.mu.Lock()
+	switch {
+	case d.closed:
+		d.mu.Unlock()
+		return Fail(CodeUnknownDoc, "")
+	case discard:
+	case verify && (d.desynced || len(d.pending) > 0):
+		d.mu.Unlock()
+		return Fail(CodeDesync, "")
+	case verify && sum != "" && !strings.EqualFold(sum, plainTextMD5(d.buf.Text())):
+		d.mu.Unlock()
+		return Fail(CodeDesync, "")
+	case d.dirty && d.readElevated:
+		d.mu.Unlock()
+		return Fail(CodeIO, "a document read as administrator has no swap")
+	}
 	d.closed = true
 	d.stopGapLocked()
 	if d.swapTimer != nil {
 		d.swapTimer.Stop()
 	}
-	watched := d.watchPath
-	d.watchPath = ""
 	d.mu.Unlock()
 
-	s.unwatch(watched)
 	d.swapMu.Lock()
 	if discard {
 		s.removeSwapLocked(d)
-	} else {
-		s.writeSwapLocked(d)
+	} else if err := s.writeSwapLocked(d); err != nil {
+		d.swapMu.Unlock()
+		d.mu.Lock()
+		d.closed = false
+		d.mu.Unlock()
+		return Fail(CodeIO, err.Error())
 	}
-	d.lock.Release()
-	d.lock = nil
+	s.parkLocked(d)
 	d.released = true
 	d.swapMu.Unlock()
 
+	s.mu.Lock()
+	delete(s.docs, d.ID)
+	last := len(s.docs) == 0
+	s.mu.Unlock()
+
 	d.mu.Lock()
+	watched := d.watchPath
+	d.watchPath = ""
 	drain := d.queueLocked(notice{kind: noticeClosed})
 	d.mu.Unlock()
+	s.unwatch(watched)
 	if drain {
 		s.drain(d)
 	}
+	if last {
+		// A large document's mirror would otherwise stay resident under a hidden window until the next GC.
+		go debug.FreeOSMemory()
+	}
 	return map[string]any{"ok": true}
+}
+
+// releaseHolder closes the document still open on swapID after a UI restart, so its swap carries the text.
+func (s *Store) releaseHolder(swapID string) *Failure {
+	s.mu.Lock()
+	var holder *Doc
+	for _, d := range s.docs {
+		if d.swapID == swapID {
+			holder = d
+			break
+		}
+	}
+	s.mu.Unlock()
+	if holder == nil {
+		return nil
+	}
+	if failure, failed := s.closeDoc(holder, false, "", false).(Failure); failed && failure.Code != CodeUnknownDoc {
+		return &Failure{Code: CodeLocked, Message: failure.Message}
+	}
+	return nil
 }
 
 // SetTitle names a draft; the title reaches recovery through the swap sidecar.
@@ -531,6 +649,13 @@ func (s *Store) Shutdown() {
 		d.lock = nil
 		d.released = true
 		d.swapMu.Unlock()
+	}
+	s.mu.Lock()
+	parked := s.parked
+	s.parked = make(map[string]*swap.Lock)
+	s.mu.Unlock()
+	for _, lock := range parked {
+		lock.Release()
 	}
 	if watcher != nil {
 		watcher.Close()

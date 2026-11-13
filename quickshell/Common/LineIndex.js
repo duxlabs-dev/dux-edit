@@ -1,5 +1,7 @@
 .pragma library
 
+const SPLICE_LIMIT = 10000;
+
 // The pane's copy of the text as lines (UTF-16, without "\n") plus their start offsets. Entries of `starts`
 // from `shiftFrom` on are stored without `shift`, so typing in one place costs nothing for the lines after
 // it; the shift is written out only between edit sites.
@@ -86,8 +88,7 @@ class LineIndex {
             starts[i] += delta;
     }
 
-    // `removed` units at `start` became `inserted`. Returns {startLine, oldLines, newLines}: lines
-    // [startLine, startLine + oldLines) were replaced by newLines lines, like the core's buffer.Change.
+    // Returns the edit as a line change, like the core's buffer.Change: {startLine, oldLines, newLines, column, removed, inserted}.
     applyEdit(start, removed, inserted) {
         const startLine = this.lineAt(start);
         const endLine = removed > 0 ? this.lineAt(start + removed) : startLine;
@@ -98,7 +99,11 @@ class LineIndex {
         const rest = this.lines[endLine].substring(start + removed - this.startOf(endLine));
         const joined = head + inserted + rest;
         const fresh = inserted.indexOf("\n") < 0 ? [joined] : joined.split("\n");
-        this.lines.splice(startLine, tail - startLine, ...fresh);
+        // Spreading a large paste into splice's arguments overflows the JS stack.
+        if (fresh.length > SPLICE_LIMIT)
+            this.lines = this.lines.slice(0, startLine).concat(fresh, this.lines.slice(tail));
+        else
+            this.lines.splice(startLine, tail - startLine, ...fresh);
         this.length += inserted.length - removed;
 
         if (this.shiftFrom < tail) {
@@ -131,7 +136,10 @@ class LineIndex {
         return {
             "startLine": startLine,
             "oldLines": tail - startLine,
-            "newLines": fresh.length
+            "newLines": fresh.length,
+            "column": start - lineStart,
+            "removed": removed,
+            "inserted": inserted.length
         };
     }
 }
@@ -139,12 +147,14 @@ class LineIndex {
 const MAX_TRACKED_EDITS = 512;
 
 // Per-line values (spans, misspellings) that follow the pane's edits. Values computed by the core at an
-// older version are moved through the edits made since, and dropped for lines those edits touched.
+// older version are moved through the edits made since; lines those edits touched are dropped. With a
+// stride, values are flat [col, len, ...] runs.
 class LineMap {
-    constructor() {
+    constructor(stride) {
         this.lines = new Map();
         this.edits = [];
         this.floor = 0;
+        this.stride = stride || 0;
     }
 
     clear() {
@@ -157,8 +167,7 @@ class LineMap {
         return this.lines.get(line);
     }
 
-    // Lines [startLine, startLine + oldLines) became newLines lines at `version`.
-    edit(version, startLine, oldLines, newLines) {
+    edit(version, startLine, oldLines, newLines, column, removed, inserted) {
         // Only a merge trims the list, and a document the core sends nothing for never merges. Past the
         // cap, values older than this edit are refused instead of tracked.
         if (this.edits.length >= MAX_TRACKED_EDITS) {
@@ -174,14 +183,45 @@ class LineMap {
         }
         const end = startLine + oldLines;
         const delta = newLines - oldLines;
-        const moved = new Map();
-        for (const [line, value] of this.lines) {
-            if (line < startLine)
-                moved.set(line, value);
-            else if (line >= end)
-                moved.set(line + delta, value);
+        if (delta !== 0) {
+            const moved = new Map();
+            for (const [line, value] of this.lines) {
+                if (line < startLine)
+                    moved.set(line, value);
+                else if (line >= end)
+                    moved.set(line + delta, value);
+            }
+            this.lines = moved;
+            return;
         }
-        this.lines = moved;
+        const kept = oldLines === 1 ? this.shifted(this.lines.get(startLine), column, removed, inserted) : undefined;
+        for (const line of this.lines.keys()) {
+            if (line >= startLine && line < end)
+                this.lines.delete(line);
+        }
+        if (kept !== undefined)
+            this.lines.set(startLine, kept);
+    }
+
+    shifted(value, column, removed, inserted) {
+        const stride = this.stride;
+        if (value === undefined || stride < 2 || column === undefined)
+            return undefined;
+        const end = column + removed;
+        const delta = inserted - removed;
+        const out = [];
+        for (let i = 0; i + stride <= value.length; i += stride) {
+            const start = value[i];
+            if (start + value[i + 1] <= column)
+                out.push(start);
+            else if (start >= end)
+                out.push(start + delta);
+            else
+                continue;
+            for (let k = 1; k < stride; k++)
+                out.push(value[i + k]);
+        }
+        return out;
     }
 
     // Values for lines first, first + 1, ... as the core saw them at `version`.
@@ -215,8 +255,51 @@ class LineMap {
     }
 }
 
-function createMap() {
-    return new LineMap();
+// One LineMap per document, for a service that keeps per-line values of several documents.
+class LineStores {
+    constructor(stride) {
+        this.maps = new Map();
+        this.stride = stride;
+    }
+
+    // Null before anything was stored for the document.
+    get(docId) {
+        return this.maps.get(docId) ?? null;
+    }
+
+    open(docId) {
+        let map = this.maps.get(docId);
+        if (!map) {
+            map = new LineMap(this.stride);
+            this.maps.set(docId, map);
+        }
+        return map;
+    }
+
+    // `change` is what LineIndex.applyEdit returned for the edit that produced `version`.
+    edited(docId, version, change) {
+        const map = this.maps.get(docId);
+        if (!map)
+            return;
+        map.edit(version, change.startLine, change.oldLines, change.newLines, change.column, change.removed, change.inserted);
+    }
+
+    forget(docId) {
+        this.maps.delete(docId);
+    }
+
+    clear() {
+        for (const map of this.maps.values())
+            map.clear();
+    }
+}
+
+function createMap(stride) {
+    return new LineMap(stride);
+}
+
+function createStores(stride) {
+    return new LineStores(stride);
 }
 
 function create(text) {

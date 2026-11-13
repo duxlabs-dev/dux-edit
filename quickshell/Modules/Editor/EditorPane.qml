@@ -9,6 +9,7 @@ import qs.DCommon.Widgets
 import qs.Services
 import "../../Common/EditTracker.js" as EditTracker
 import "../../Common/LineIndex.js" as LineIndex
+import "../../Common/TextOps.js" as TextOps
 import "../../DCommon/Common/Contrast.js" as Contrast
 
 // The editing surface of one tab: plain-text editor with syntax, spelling and match formats, visible-lines
@@ -18,23 +19,34 @@ Item {
 
     required property var doc
 
-    readonly property string selectedText: textEdit.selectedText
     readonly property bool canUndo: textEdit.canUndo
     readonly property bool canRedo: textEdit.canRedo
     readonly property int cursorPosition: textEdit.cursorPosition
     readonly property int selectionStart: textEdit.selectionStart
     readonly property int selectionEnd: textEdit.selectionEnd
+    readonly property bool overwrite: textEdit.overwriteMode
 
     readonly property bool shown: visible
     readonly property bool simple: Documents.simple
     readonly property string lexer: root.doc.lexer
     readonly property bool markdown: root.doc.isMarkdown
     readonly property bool prose: EditorMetrics.proseLexers.includes(lexer.toLowerCase())
-    readonly property bool wrapping: SettingsData.wrapMode === "on" || (SettingsData.wrapMode === "auto" && prose)
+    // "auto" leaves large text unwrapped: wrapped, every width change lays the whole document out again.
+    property bool large: false
+    readonly property int wrapLimit: 2 << 20
+    readonly property bool autoWrap: SettingsData.wrapMode === "on" || (SettingsData.wrapMode === "auto" && prose && !large)
+    // "" | "on" | "off": the document's own choice, over the setting and the size limit.
+    readonly property string wrapOverride: root.doc.wrapOverride ?? ""
+    readonly property bool wrapping: wrapOverride === "on" || (wrapOverride !== "off" && autoWrap)
+    readonly property bool indentSpaces: root.doc.indentStyle ? root.doc.indentStyle === "space" : SettingsData.insertSpaces
+    readonly property int indentWidth: root.doc.indentWidth > 0 ? root.doc.indentWidth : Math.max(1, SettingsData.tabWidth)
+    readonly property string indentUnit: indentSpaces ? " ".repeat(indentWidth) : "\t"
+    property real wrapWidth: 0
+    readonly property int resizeDelay: 100
     readonly property string fontFamily: SettingsData.fontFamily || (SettingsData.useMonospace ? Style.monoFontFamily : Style.fontFamily)
     readonly property int fontSize: SettingsData.fontSize
     readonly property real padding: simple ? EditorMetrics.simplePadding : EditorMetrics.padding
-    readonly property bool gutterShown: SettingsData.showLineNumbers
+    readonly property bool gutterShown: SettingsData.showLineNumbers && !simple
     readonly property real proseWidth: fontMetrics.averageCharacterWidth * EditorMetrics.proseColumns + padding * 2
     readonly property bool centered: simple && wrapping && flickable.width > proseWidth
     readonly property real screenWidth: Math.max(1, Screen.width)
@@ -51,9 +63,20 @@ Item {
     property bool hasSeparators: false
     readonly property bool decorated: (highlightOn || spellOn || matchCount > 0) && !hasSeparators
 
-    // Role 0 keeps the editor's own color.
-    readonly property var palette: Highlight.palette.map((entry, role) => role === 0 ? ({}) : entry)
+    // Role 0 keeps the editor's own color; the role after the syntax roles marks matching brackets.
+    readonly property var palette: Highlight.palette.map((entry, role) => role === 0 ? ({}) : entry).concat([
+        {
+            "color": Style.primary,
+            "bold": true
+        }
+    ])
+    readonly property int bracketRole: palette.length - 1
+    readonly property int bracketBudget: 20000
     readonly property color matchColor: Contrast.mix(Style.surface, Style.primary, Style.primarySelected.a)
+
+    readonly property bool lineHighlightOn: SettingsData.highlightCurrentLine
+    property real lineHighlightY: 0
+    property real lineHighlightHeight: 0
 
     // Built lines around the viewport, line L in slot L % slots.length: {line, y, height}. Delegates keep
     // their slot while scrolling, so only lines entering the range are laid out again.
@@ -72,8 +95,11 @@ Item {
             "sentFirst": -1,
             "sentLast": -1,
             "cursorLine": -1,
+            "spellSent": "",
             "pairs": 0,
-            "decorated": new Map()
+            "decorated": new Map(),
+            "brackets": new Map(),
+            "bracketLines": new Set()
         })
 
     // The text exactly as the core mirrors it, up to the NBSP and line separator normalization of TextEdit.
@@ -100,18 +126,267 @@ Item {
     }
 
     // Offsets are UTF-16 units. The common ends are kept, so a pure insert or delete is one undo step.
+    // Compared with the stored text: the mirror reads no-break spaces as spaces.
     function replaceRange(start, end, text) {
-        const change = EditTracker.diff(mirror.index.text(start, end), text);
+        const change = EditTracker.diff(decorations.text(start, end), text);
         if (!change)
             return;
         edit(start + change.start, change.removed, change.text);
     }
 
     function edit(start, removed, text) {
+        // A runtime with TextDecorations.replace makes a replacement one undo step and one delta.
+        if (removed > 0 && text.length > 0 && typeof decorations.replace === "function") {
+            decorations.replace(start, start + removed, text);
+            return;
+        }
         if (removed > 0)
             textEdit.remove(start, start + removed);
         if (text.length > 0)
             textEdit.insert(start, text);
+    }
+
+    function editable() {
+        return !textEdit.readOnly && !mirror.loading;
+    }
+
+    function selectionAnchor() {
+        return textEdit.cursorPosition === textEdit.selectionStart ? textEdit.selectionEnd : textEdit.selectionStart;
+    }
+
+    function readStored(start, end) {
+        return decorations.text(start, end);
+    }
+
+    function applyPlan(make) {
+        if (!editable())
+            return;
+        const plan = make(mirror.index, root.readStored, selectionAnchor(), textEdit.cursorPosition);
+        if (!plan)
+            return;
+        replaceRange(plan.start, plan.end, plan.text);
+        textEdit.select(plan.anchor, plan.cursor);
+    }
+
+    function newline() {
+        if (!editable())
+            return;
+        const index = mirror.index;
+        const start = textEdit.selectionStart;
+        const line = index.lineAt(start);
+        const lineStart = index.startOf(line);
+        const lead = Math.min(TextOps.leadingWhitespace(index.lineText(line)).length, start - lineStart);
+        const text = "\n" + decorations.text(lineStart, lineStart + lead);
+        replaceRange(start, textEdit.selectionEnd, text);
+        textEdit.cursorPosition = start + text.length;
+    }
+
+    function indent() {
+        applyPlan((index, read, anchor, cursor) => TextOps.reindentPlan(index, read, anchor, cursor, true, root.indentUnit, root.indentWidth));
+    }
+
+    function unindent() {
+        applyPlan((index, read, anchor, cursor) => TextOps.reindentPlan(index, read, anchor, cursor, false, root.indentUnit, root.indentWidth));
+    }
+
+    function insertSpacesForTab() {
+        const index = mirror.index;
+        const column = textEdit.selectionStart - index.startOf(index.lineAt(textEdit.selectionStart));
+        replaceSelection(" ".repeat(indentWidth - column % indentWidth));
+    }
+
+    function deleteLines() {
+        applyPlan((index, read, anchor, cursor) => TextOps.deleteLinesPlan(index, anchor, cursor));
+    }
+
+    function duplicate() {
+        applyPlan(TextOps.duplicatePlan);
+    }
+
+    function moveLinesUp() {
+        applyPlan((index, read, anchor, cursor) => TextOps.moveLinesPlan(index, read, anchor, cursor, false));
+    }
+
+    function moveLinesDown() {
+        applyPlan((index, read, anchor, cursor) => TextOps.moveLinesPlan(index, read, anchor, cursor, true));
+    }
+
+    function joinLines() {
+        applyPlan(TextOps.joinLinesPlan);
+    }
+
+    function sortLines() {
+        applyPlan(TextOps.sortLinesPlan);
+    }
+
+    function selectLine() {
+        const range = TextOps.lineSelection(mirror.index, selectionAnchor(), textEdit.cursorPosition);
+        textEdit.select(range[0], range[1]);
+    }
+
+    function upperCase() {
+        changeCase("upper");
+    }
+
+    function lowerCase() {
+        changeCase("lower");
+    }
+
+    function titleCase() {
+        changeCase("title");
+    }
+
+    // Recases the selection and keeps it selected; the length can change ("ß" becomes "SS").
+    function changeCase(kind) {
+        const start = textEdit.selectionStart;
+        const end = textEdit.selectionEnd;
+        if (!editable() || end <= start)
+            return;
+        const text = decorations.text(start, end);
+        let next = text;
+        switch (kind) {
+        case "upper":
+            next = text.toUpperCase();
+            break;
+        case "lower":
+            next = text.toLowerCase();
+            break;
+        case "title":
+            next = TextOps.titleCase(text);
+            break;
+        }
+        const reversed = textEdit.cursorPosition === start;
+        replaceRange(start, end, next);
+        if (reversed)
+            textEdit.select(start + next.length, start);
+        else
+            textEdit.select(start, start + next.length);
+    }
+
+    // The stored text, so no-break spaces and line separators survive.
+    function copyAll() {
+        Quickshell.clipboardText = decorations.text(0, textEdit.length);
+    }
+
+    function toggleOverwrite() {
+        textEdit.overwriteMode = !textEdit.overwriteMode;
+    }
+
+    function smartHome(extend) {
+        const index = mirror.index;
+        const line = index.lineAt(textEdit.cursorPosition);
+        const lineStart = index.startOf(line);
+        const target = lineStart + TextOps.smartHome(index.lineText(line), textEdit.cursorPosition - lineStart);
+        if (extend)
+            textEdit.moveCursorSelection(target, TextEdit.SelectCharacters);
+        else
+            textEdit.cursorPosition = target;
+    }
+
+    function toggleWrap() {
+        if (root.doc.wrapOverride === undefined)
+            return;
+        const next = !wrapping;
+        root.doc.wrapOverride = next === autoWrap ? "" : (next ? "on" : "off");
+    }
+
+    function findNext() {
+        findStep(true);
+    }
+
+    function findPrevious() {
+        findStep(false);
+    }
+
+    function findStep(forward) {
+        if (findLoader.item?.search(forward))
+            return;
+        openFind(false);
+    }
+
+    function wordCount() {
+        return TextOps.countWords(mirror.index.lines);
+    }
+
+    function handleKey(event) {
+        const mods = event.modifiers & (Qt.ControlModifier | Qt.ShiftModifier | Qt.AltModifier | Qt.MetaModifier);
+        const plain = (mods & ~Qt.ShiftModifier) === 0;
+        switch (event.key) {
+        case Qt.Key_Tab:
+        case Qt.Key_Backtab:
+            event.accepted = tabPressed(event.key === Qt.Key_Backtab || mods === Qt.ShiftModifier, plain);
+            return;
+        case Qt.Key_Return:
+        case Qt.Key_Enter:
+            if (!plain || !editable() || textEdit.inputMethodComposing)
+                return;
+            newline();
+            break;
+        case Qt.Key_Home:
+            if (!plain)
+                return;
+            smartHome(mods === Qt.ShiftModifier);
+            break;
+        case Qt.Key_Insert:
+            if (mods !== 0)
+                return;
+            toggleOverwrite();
+            break;
+        case Qt.Key_D:
+            if (mods === Qt.ControlModifier)
+                deleteLines();
+            else if (mods === (Qt.ControlModifier | Qt.AltModifier) || mods === (Qt.ControlModifier | Qt.ShiftModifier))
+                duplicate();
+            else
+                return;
+            break;
+        case Qt.Key_Up:
+        case Qt.Key_Down:
+            if (mods !== Qt.AltModifier)
+                return;
+            if (event.key === Qt.Key_Down)
+                moveLinesDown();
+            else
+                moveLinesUp();
+            break;
+        case Qt.Key_L:
+            if (mods !== Qt.ControlModifier)
+                return;
+            selectLine();
+            break;
+        case Qt.Key_J:
+            if (mods !== Qt.ControlModifier)
+                return;
+            joinLines();
+            break;
+        case Qt.Key_Escape:
+            if (!findOpen)
+                return;
+            closeFind();
+            break;
+        default:
+            return;
+        }
+        event.accepted = true;
+    }
+
+    // True when the key was used.
+    function tabPressed(back, plain) {
+        if (!plain || !editable())
+            return false;
+        const index = mirror.index;
+        const severalLines = index.lineAt(textEdit.selectionStart) !== index.lineAt(textEdit.selectionEnd);
+        if (severalLines || back) {
+            if (back)
+                unindent();
+            else
+                indent();
+            return true;
+        }
+        if (!indentSpaces)
+            return false;
+        insertSpacesForTab();
+        return true;
     }
 
     // 1-based; column 0 means the start of the line.
@@ -185,6 +460,7 @@ Item {
     // Asks the core to check the visible lines again, after the dictionary changed.
     function respell() {
         mirror.cursorLine = -1;
+        mirror.spellSent = "";
         sendSpellView();
     }
 
@@ -210,6 +486,7 @@ Item {
         mirror.index = LineIndex.create(text);
         // Before the text goes in: a gutter that widens afterwards would lay the whole document out again.
         root.doc.lineCount = mirror.index.count;
+        large = text.length > wrapLimit;
         textEdit.text = text;
         // TextEdit reports NBSP as a space and line separators as "\n"; the lines must match what it reports.
         if (hasSeparators || text.indexOf("\u00a0") >= 0)
@@ -218,7 +495,10 @@ Item {
         mirror.sentFirst = -1;
         mirror.sentLast = -1;
         mirror.cursorLine = -1;
+        mirror.spellSent = "";
         mirror.decorated.clear();
+        mirror.brackets = new Map();
+        mirror.bracketLines.clear();
         Highlight.forget(mirror.docId);
         Spell.forget(mirror.docId);
         mirror.pairs = surrogatePairs(text);
@@ -251,13 +531,47 @@ Item {
     function contentsEdited(position, removed, added) {
         if (mirror.loading)
             return;
-        applyChange({
+        const lines = applyChange({
             "start": position,
             "removed": removed,
             "text": decorations.text(position, position + added)
         }, textEdit.length);
-        updateCursor();
+        mirror.brackets = new Map();
+        shiftDecorated(lines);
+        Qt.callLater(root.updateCursor);
+        // Unwrapped, an edit that keeps the line count moves no line, so the gutter stays as built.
+        if (lines.oldLines === lines.newLines && !wrapping) {
+            decorate();
+            return;
+        }
         refreshView(true);
+        // Blocks added by this edit are not laid out yet, so their rows are measured again after it.
+        Qt.callLater(root.remeasure);
+    }
+
+    function remeasure() {
+        if (mirror.loading || mirror.builtLast < 0)
+            return;
+        layoutSlots();
+    }
+
+    function shiftDecorated(lines) {
+        const delta = lines.newLines - lines.oldLines;
+        if (delta === 0)
+            return;
+        const end = lines.startLine + lines.oldLines;
+        const moved = new Map();
+        for (const [line, entry] of mirror.decorated) {
+            if (line < lines.startLine)
+                moved.set(line, entry);
+            else if (line >= end)
+                moved.set(line + delta, entry);
+        }
+        mirror.decorated = moved;
+        const bracketLines = new Set();
+        for (const line of mirror.bracketLines)
+            bracketLines.add(line < lines.startLine ? line : line >= end ? line + delta : lines.startLine);
+        mirror.bracketLines = bracketLines;
     }
 
     function applyChange(change, length) {
@@ -268,14 +582,15 @@ Item {
         const lines = mirror.index.applyEdit(change.start, change.removed, shown);
         const doc = root.doc;
         doc.edited(change.start, change.removed, change.text, length);
-        Highlight.linesEdited(mirror.docId, lines.startLine, lines.oldLines, lines.newLines, doc.version);
-        Spell.linesEdited(mirror.docId, lines.startLine, lines.oldLines, lines.newLines, doc.version);
+        Highlight.linesEdited(mirror.docId, doc.version, lines);
+        Spell.linesEdited(mirror.docId, doc.version, lines);
         if (shown !== change.text)
             hasSeparators = hasSeparators || /[\u2028\u2029\ufdd0\ufdd1]/.test(change.text);
         doc.charCount = length - mirror.pairs;
         doc.lineCount = mirror.index.count;
         findLoader.item?.documentEdited(change);
         previewLoader.item?.documentEdited();
+        return lines;
     }
 
     function updateCursor() {
@@ -288,11 +603,73 @@ Item {
         doc.cursorLine = line + 1;
         doc.cursorColumn = pos - mirror.index.startOf(line) + 1;
         const selected = textEdit.selectionEnd - textEdit.selectionStart;
-        doc.selectionLength = selected > 0 ? selected - surrogatePairs(mirror.index.text(textEdit.selectionStart, textEdit.selectionEnd)) : 0;
+        if (selected <= 0 || mirror.pairs === 0)
+            doc.selectionLength = Math.max(0, selected);
+        else
+            doc.selectionLength = selected - surrogatePairs(mirror.index.text(textEdit.selectionStart, textEdit.selectionEnd));
         currentLine = line;
         mirror.cursorLine = line;
         // On every move, not only a new line: the core skips the word being typed by its column.
         sendSpellView();
+        placeLineHighlight();
+        updateBrackets();
+    }
+
+    function placeLineHighlight() {
+        if (!lineHighlightOn || mirror.loading)
+            return;
+        const index = mirror.index;
+        const line = Math.min(currentLine, index.count - 1);
+        const top = textEdit.positionToRectangle(index.startOf(line));
+        const bottom = wrapping ? textEdit.positionToRectangle(index.endOf(line)) : top;
+        lineHighlightY = top.y;
+        lineHighlightHeight = bottom.y + bottom.height - top.y;
+    }
+
+    function updateBrackets() {
+        const index = mirror.index;
+        const next = new Map();
+        const pair = hasSeparators || mirror.builtLast < 0 ? null : TextOps.matchBracket(index, textEdit.cursorPosition, mirror.builtFirst, mirror.builtLast, bracketBudget);
+        for (const offset of pair ?? []) {
+            const line = index.lineAt(offset);
+            const spans = next.get(line) ?? [];
+            spans.push(offset - index.startOf(line), 1, bracketRole);
+            next.set(line, spans);
+        }
+        if (sameBrackets(mirror.brackets, next))
+            return;
+        mirror.brackets = next;
+        if (mirror.builtLast < 0)
+            return;
+        const stores = formatStores();
+        let changed = false;
+        for (const line of bracketLinesToFormat()) {
+            if (stores && (line < mirror.builtFirst || line > mirror.builtLast)) {
+                mirror.decorated.delete(line);
+                continue;
+            }
+            changed = decorateLine(line, stores) || changed;
+        }
+        if (changed && wrapping)
+            layoutSlots();
+    }
+
+    function sameBrackets(a, b) {
+        if (a.size !== b.size)
+            return false;
+        for (const [line, spans] of b) {
+            const other = a.get(line);
+            if (!other || other.length !== spans.length || other.some((value, i) => value !== spans[i]))
+                return false;
+        }
+        return true;
+    }
+
+    function bracketLinesToFormat() {
+        const lines = new Set(mirror.bracketLines);
+        for (const line of mirror.brackets.keys())
+            lines.add(line);
+        return lines;
     }
 
     function sendSpellView() {
@@ -300,6 +677,10 @@ Item {
             return;
         const line = mirror.cursorLine;
         const column = line >= 0 ? textEdit.cursorPosition - mirror.index.startOf(line) : -1;
+        const sent = mirror.sentFirst + ":" + mirror.sentLast + ":" + line + ":" + column;
+        if (sent === mirror.spellSent)
+            return;
+        mirror.spellSent = sent;
         Spell.view(root.doc, mirror.sentFirst, mirror.sentLast, line, column);
     }
 
@@ -342,6 +723,7 @@ Item {
         sendViews(first, last);
         decorate();
         layoutSlots();
+        updateBrackets();
     }
 
     // Gutter geometry for the built lines, measured after their formats are in: bold runs can rewrap a line.
@@ -361,6 +743,7 @@ Item {
         mirror.builtTop = textEdit.positionToRectangle(index.startOf(mirror.builtFirst)).y;
         mirror.builtBottom = end.y + end.height;
         slots = built;
+        placeLineHighlight();
     }
 
     function sendViews(first, last) {
@@ -377,6 +760,7 @@ Item {
     function resendViews() {
         mirror.sentFirst = -1;
         mirror.sentLast = -1;
+        mirror.spellSent = "";
         refreshView(true);
     }
 
@@ -393,38 +777,62 @@ Item {
         mirror.decorated.clear();
         if (!decorated) {
             decorations.clear();
-            return;
+            mirror.bracketLines.clear();
         }
         redecorate();
     }
 
-    // Formats the built lines whose text, spans, spelling or matches changed. True when any format did.
+    function formatStores() {
+        if (!decorated)
+            return null;
+        return {
+            "spans": highlightOn ? Highlight.spans(mirror.docId) : null,
+            "spell": spellOn ? Spell.ranges(mirror.docId) : null,
+            "matches": matchCount > 0 ? findLoader.item.matches : null
+        };
+    }
+
+    // True when any format changed.
     function decorate() {
-        if (!decorated || mirror.builtLast < 0)
+        if (mirror.builtLast < 0)
             return false;
-        const index = mirror.index;
-        const spanStore = highlightOn ? Highlight.spans(mirror.docId) : null;
-        const spellStore = spellOn ? Spell.ranges(mirror.docId) : null;
-        const matches = matchCount > 0 ? findLoader.item.matches : null;
+        const stores = formatStores();
         let changed = false;
-        for (let line = mirror.builtFirst; line <= mirror.builtLast; line++) {
-            const text = index.lineText(line);
-            const spans = spanStore?.get(line) ?? null;
-            const spell = spellStore?.get(line) ?? null;
-            const found = matches ? lineMatches(matches, index.startOf(line), index.endOf(line)) : null;
-            const key = found ? found.join(",") : "";
-            const cached = mirror.decorated.get(line);
-            if (cached && cached.text === text && cached.spans === spans && cached.spell === spell && cached.key === key)
-                continue;
-            mirror.decorated.set(line, {
-                "text": text,
-                "spans": spans,
-                "spell": spell,
-                "key": key
-            });
-            changed = decorations.setLine(line, spans ?? [], spell ?? [], found ?? []) || changed;
+        if (!stores) {
+            if (mirror.bracketLines.size === 0 && mirror.brackets.size === 0)
+                return false;
+            for (const line of bracketLinesToFormat())
+                changed = decorateLine(line, null) || changed;
+            return changed;
         }
+        for (let line = mirror.builtFirst; line <= mirror.builtLast; line++)
+            changed = decorateLine(line, stores) || changed;
         return changed;
+    }
+
+    function decorateLine(line, stores) {
+        const index = mirror.index;
+        const text = index.lineText(line);
+        const spans = stores?.spans?.get(line) ?? null;
+        const spell = stores?.spell?.get(line) ?? null;
+        const found = stores?.matches ? lineMatches(stores.matches, index.startOf(line), index.endOf(line)) : null;
+        const key = found ? found.join(",") : "";
+        const bracket = mirror.brackets.get(line) ?? null;
+        const cached = mirror.decorated.get(line);
+        if (cached && cached.text === text && cached.spans === spans && cached.spell === spell && cached.key === key && cached.bracket === bracket)
+            return false;
+        mirror.decorated.set(line, {
+            "text": text,
+            "spans": spans,
+            "spell": spell,
+            "key": key,
+            "bracket": bracket
+        });
+        if (bracket)
+            mirror.bracketLines.add(line);
+        else
+            mirror.bracketLines.delete(line);
+        return decorations.setLine(line, bracket ? (spans ?? []).concat(bracket) : spans ?? [], spell ?? [], found ?? []);
     }
 
     // Matches inside [lineStart, lineStop) as [col, len, ...], or null. `matches` is sorted and flat.
@@ -478,11 +886,11 @@ Item {
         spellMenu.show(misspelledAt(position), point.x, point.y);
     }
 
-    function insertSpacesForTab() {
-        const index = mirror.index;
-        const column = textEdit.selectionStart - index.startOf(index.lineAt(textEdit.selectionStart));
-        const width = Math.max(1, SettingsData.tabWidth);
-        replaceSelection(" ".repeat(width - column % width));
+    function followWidth() {
+        if (wrapWidth === flickable.width)
+            return;
+        wrapWidth = flickable.width;
+        refreshView(true);
     }
 
     onShownChanged: {
@@ -500,6 +908,7 @@ Item {
     onSpellOnChanged: resendViews()
     onHighlightRequestedChanged: resendViews()
     onWrappingChanged: refreshView(true)
+    onLineHighlightOnChanged: placeLineHighlight()
     onFontFamilyChanged: refreshView(true)
     onFontSizeChanged: refreshView(true)
     onCenteredChanged: refreshView(true)
@@ -534,6 +943,12 @@ Item {
             if (docId === root.mirror.docId && root.spellOn && root.decorated)
                 root.redecorate();
         }
+    }
+
+    Timer {
+        id: resizeTimer
+        interval: root.resizeDelay
+        onTriggered: root.followWidth()
     }
 
     FontMetrics {
@@ -618,6 +1033,11 @@ Item {
             }
             onHeightChanged: root.refreshView(true)
             onWidthChanged: {
+                if (root.wrapping && root.wrapWidth > 0) {
+                    resizeTimer.restart();
+                    return;
+                }
+                root.wrapWidth = width;
                 if (root.wrapping)
                     root.refreshView(true);
             }
@@ -642,7 +1062,7 @@ Item {
                 // Every width change lays the whole document out again (about 1 s on 2 MB), and reading
                 // implicitWidth does so twice per edit. Unwrapped, the width grows a screen at a time and
                 // ignores window and gutter resizes.
-                width: root.wrapping ? (root.centered ? root.proseWidth : flickable.width) : Math.ceil((contentWidth + leftPadding + rightPadding + 1) / root.screenWidth) * root.screenWidth
+                width: root.wrapping ? (root.centered ? root.proseWidth : root.wrapWidth) : Math.ceil((contentWidth + leftPadding + rightPadding + 1) / root.screenWidth) * root.screenWidth
                 height: Math.max(implicitHeight, flickable.height)
                 padding: root.padding
                 textFormat: TextEdit.PlainText
@@ -655,7 +1075,7 @@ Item {
                 selectedTextColor: Style.onPrimary
                 font.family: root.fontFamily
                 font.pixelSize: root.fontSize
-                tabStopDistance: Math.max(1, SettingsData.tabWidth * fontMetrics.advanceWidth(" "))
+                tabStopDistance: Math.max(1, root.indentWidth * fontMetrics.advanceWidth(" "))
 
                 cursorDelegate: DTextCursor {
                     readonly property int editCursorPosition: textEdit.cursorPosition
@@ -669,9 +1089,10 @@ Item {
                     onEditCursorPositionChanged: resetBlink()
                 }
 
-                onCursorPositionChanged: root.updateCursor()
-                onSelectionStartChanged: root.updateCursor()
-                onSelectionEndChanged: root.updateCursor()
+                // Qt emits all three on most keystrokes; one update reads them after the edit is mirrored.
+                onCursorPositionChanged: Qt.callLater(root.updateCursor)
+                onSelectionStartChanged: Qt.callLater(root.updateCursor)
+                onSelectionEndChanged: Qt.callLater(root.updateCursor)
                 onCursorRectangleChanged: {
                     if (!root.mirror.loading && activeFocus)
                         root.revealRect(cursorRectangle);
@@ -679,21 +1100,17 @@ Item {
                 onTabStopDistanceChanged: root.refreshView(true)
                 onImplicitHeightChanged: root.refreshView(false)
 
-                Keys.onPressed: event => {
-                    switch (event.key) {
-                    case Qt.Key_Tab:
-                        if (!SettingsData.insertSpaces || event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
-                            return;
-                        root.insertSpacesForTab();
-                        event.accepted = true;
-                        return;
-                    case Qt.Key_Escape:
-                        if (!root.findOpen)
-                            return;
-                        root.closeFind();
-                        event.accepted = true;
-                        return;
-                    }
+                Keys.onPressed: event => root.handleKey(event)
+
+                // Under the text: a negative z draws below the parent's own content.
+                Rectangle {
+                    z: -1
+                    x: -textEdit.x
+                    y: root.lineHighlightY
+                    width: Math.max(textEdit.width, flickable.width)
+                    height: root.lineHighlightHeight
+                    visible: root.lineHighlightOn && root.doc.loaded
+                    color: Style.surfaceTextHover
                 }
 
                 HoverHandler {

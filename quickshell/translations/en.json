@@ -2,229 +2,265 @@
   {
     "term": "%1 (U+%2) cannot be written in this encoding.",
     "context": "%1 (U+%2) cannot be written in this encoding.",
-    "reference": "Services/Documents.qml:497",
+    "reference": "Services/Documents.qml:644",
     "comment": "dialog message; %1 is a character, %2 its Unicode code point"
   },
   {
     "term": "%1 already exists. Replacing it overwrites its contents.",
     "context": "%1 already exists. Replacing it overwrites its contents.",
-    "reference": "Services/Documents.qml:461",
+    "reference": "Services/Documents.qml:608",
     "comment": "dialog message; %1 is a file name"
   },
   {
     "term": "%1 characters",
     "context": "%1 characters",
-    "reference": "Modules/StatusBar.qml:124",
+    "reference": "Modules/StatusBar.qml:127",
     "comment": "status bar character count"
   },
   {
     "term": "%1 characters, %2 lines",
     "context": "%1 characters, %2 lines",
-    "reference": "Modules/StatusBar.qml:125",
+    "reference": "Modules/StatusBar.qml:128",
     "comment": "status bar document counts"
   },
   {
     "term": "%1 documents have unsaved changes from an earlier session.",
     "context": "%1 documents have unsaved changes from an earlier session.",
-    "reference": "Services/Documents.qml:734",
+    "reference": "Services/Documents.qml:921",
     "comment": "recovery notice; %1 is a count"
   },
   {
     "term": "%1 documents were opened as administrator and have no crash recovery. Quitting discards their unsaved changes.",
     "context": "%1 documents were opened as administrator and have no crash recovery. Quitting discards their unsaved changes.",
-    "reference": "Services/Documents.qml:650",
+    "reference": "Services/Documents.qml:815",
     "comment": "dialog message; %1 is a count"
+  },
+  {
+    "term": "%1 goes back to the version on disk. Your unsaved changes are lost.",
+    "context": "%1 goes back to the version on disk. Your unsaved changes are lost.",
+    "reference": "Services/Documents.qml:456",
+    "comment": "dialog message; %1 is a file name"
   },
   {
     "term": "%1 is %2 MB. Large files use a lot of memory and open without highlighting.",
     "context": "%1 is %2 MB. Large files use a lot of memory and open without highlighting.",
-    "reference": "Modules/MainWindow.qml:223",
+    "reference": "Modules/MainWindow.qml:316",
     "comment": "dialog message; %1 is a file name, %2 a size"
   },
   {
     "term": "%1 is a binary file.",
     "context": "%1 is a binary file.",
-    "reference": "Services/Documents.qml:287",
+    "reference": "Services/Documents.qml:339",
     "comment": "error opening a file; %1 is a file name"
   },
   {
     "term": "%1 is a folder.",
     "context": "%1 is a folder.",
-    "reference": "Services/Documents.qml:291",
+    "reference": "Services/Documents.qml:343",
     "comment": "error opening a file; %1 is a file name"
   },
   {
     "term": "%1 is open in another Dux Edit window.",
     "context": "%1 is open in another Dux Edit window.",
-    "reference": "Services/Documents.qml:293",
+    "reference": "Services/Documents.qml:345",
     "comment": "error opening a file; %1 is a file name"
   },
   {
     "term": "%1 is too large to open.",
     "context": "%1 is too large to open.",
-    "reference": "Services/Documents.qml:289",
+    "reference": "Services/Documents.qml:341",
     "comment": "error opening a file; %1 is a file name"
+  },
+  {
+    "term": "%1 no longer exists.",
+    "context": "%1 no longer exists.",
+    "reference": "Services/Documents.qml:355",
+    "comment": "error opening a recent file; %1 is a file name"
   },
   {
     "term": "%1 of %2 characters",
     "context": "%1 of %2 characters",
-    "reference": "Modules/StatusBar.qml:122",
+    "reference": "Modules/StatusBar.qml:125",
     "comment": "status bar selected and total characters"
   },
   {
     "term": "%1 was deleted from disk.",
     "context": "%1 was deleted from disk.",
-    "reference": "Services/Documents.qml:854",
+    "reference": "Services/Documents.qml:293, Services/Documents.qml:690, Services/Documents.qml:1051",
     "comment": "notice; %1 is a file name"
   },
   {
     "term": "%1 was opened as administrator and has no crash recovery. Quitting discards its unsaved changes.",
     "context": "%1 was opened as administrator and has no crash recovery. Quitting discards its unsaved changes.",
-    "reference": "Services/Documents.qml:650",
+    "reference": "Services/Documents.qml:815",
     "comment": "dialog message; %1 is a file name"
+  },
+  {
+    "term": "%1 words",
+    "context": "%1 words",
+    "reference": "Modules/StatusBar.qml:222",
+    "comment": "status bar word count; %1 is a number"
   },
   {
     "term": "%1/%2",
     "context": "%1/%2",
-    "reference": "Modules/Editor/FindBar.qml:40",
+    "reference": "Modules/Editor/FindBar.qml:42",
     "comment": "find bar counter, current match and total"
   },
   {
     "term": "1 document has unsaved changes from an earlier session.",
     "context": "1 document has unsaved changes from an earlier session.",
-    "reference": "Services/Documents.qml:734",
+    "reference": "Services/Documents.qml:921",
     "comment": "recovery notice"
+  },
+  {
+    "term": "1 word",
+    "context": "1 word",
+    "reference": "Modules/StatusBar.qml:222",
+    "comment": "status bar word count"
   },
   {
     "term": "Add to Dictionary",
     "context": "Add to Dictionary",
-    "reference": "Modules/Editor/SpellMenu.qml:64",
+    "reference": "Modules/Editor/SpellMenu.qml:176",
     "comment": "spelling menu action"
   },
   {
     "term": "Administrator access is not available inside a sandbox.",
     "context": "Administrator access is not available inside a sandbox.",
-    "reference": "Services/Documents.qml:277",
+    "reference": "Services/Documents.qml:329",
     "comment": "reason administrator access is unavailable"
   },
   {
     "term": "Administrator access is not available.",
     "context": "Administrator access is not available.",
-    "reference": "Services/Documents.qml:279",
+    "reference": "Services/Documents.qml:331",
     "comment": "reason administrator access is unavailable"
   },
   {
     "term": "Administrator access needs pkexec, which is not installed.",
     "context": "Administrator access needs pkexec, which is not installed.",
-    "reference": "Services/Documents.qml:275",
+    "reference": "Services/Documents.qml:327",
     "comment": "reason administrator access is unavailable"
   },
   {
     "term": "Administrator access needs the installed polkit policy.",
     "context": "Administrator access needs the installed polkit policy.",
-    "reference": "Services/Documents.qml:273",
+    "reference": "Services/Documents.qml:325",
     "comment": "reason administrator access is unavailable"
   },
   {
     "term": "Advanced",
     "context": "Advanced",
-    "reference": "Modules/SettingsView.qml:269",
+    "reference": "Modules/SettingsView.qml:245",
     "comment": "view mode"
   },
   {
     "term": "Also check text inside quotes in code.",
     "context": "Also check text inside quotes in code.",
-    "reference": "Modules/SettingsView.qml:487",
+    "reference": "Modules/SettingsView.qml:453",
     "comment": "setting description"
   },
   {
     "term": "Also used when Dux Shell colors are not available.",
     "context": "Also used when Dux Shell colors are not available.",
-    "reference": "Modules/SettingsView.qml:297",
+    "reference": "Modules/SettingsView.qml:274",
     "comment": "setting description"
   },
   {
     "term": "Always",
     "context": "Always",
-    "reference": "Modules/SettingsView.qml:346",
+    "reference": "Modules/SettingsView.qml:337",
     "comment": "wrap mode"
   },
   {
     "term": "Amber",
     "context": "Amber",
-    "reference": "Modules/SettingsView.qml:57",
+    "reference": "Modules/SettingsView.qml:121",
     "comment": "color palette name"
+  },
+  {
+    "term": "Appearance",
+    "context": "Appearance",
+    "reference": "Modules/SettingsView.qml:29",
+    "comment": "settings category"
   },
   {
     "term": "Apply",
     "context": "Apply",
-    "reference": "Modules/MainWindow.qml:71",
+    "reference": "Modules/MainWindow.qml:125",
     "comment": "button that applies a color"
   },
   {
     "term": "Attribute",
     "context": "Attribute",
-    "reference": "Modules/SettingsView.qml:81",
+    "reference": "Modules/Settings/HighlightPage.qml:48",
     "comment": "syntax role"
   },
   {
     "term": "Auto",
     "context": "Auto",
-    "reference": "Modules/StatusBar.qml:327, Modules/StatusBar.qml:344",
+    "reference": "Modules/StatusBar.qml:362, Modules/StatusBar.qml:379",
     "comment": "language picker entry that detects the language | spellcheck language entry that follows the system locale"
   },
   {
     "term": "Auto saved",
     "context": "Auto saved",
-    "reference": "Modules/StatusBar.qml:108",
+    "reference": "Modules/StatusBar.qml:111",
     "comment": "status bar save state"
   },
   {
     "term": "Automatic",
     "context": "Automatic",
-    "reference": "Modules/SettingsView.qml:346",
+    "reference": "Modules/SettingsView.qml:337",
     "comment": "wrap mode"
   },
   {
     "term": "Automatic wraps prose and Markdown and leaves code unwrapped.",
     "context": "Automatic wraps prose and Markdown and leaves code unwrapped.",
-    "reference": "Modules/SettingsView.qml:345",
+    "reference": "Modules/SettingsView.qml:336",
     "comment": "setting description"
   },
   {
     "term": "Autosave",
     "context": "Autosave",
-    "reference": "Modules/SettingsView.qml:386",
+    "reference": "Modules/SettingsView.qml:380",
     "comment": "setting name"
   },
   {
     "term": "Autosave failed for %1.",
     "context": "Autosave failed for %1.",
-    "reference": "Services/Documents.qml:603",
+    "reference": "Services/Documents.qml:759",
     "comment": "error; %1 is a file name"
+  },
+  {
+    "term": "Autosave, session and closing the window",
+    "context": "Autosave, session and closing the window",
+    "reference": "Modules/SettingsView.qml:42",
+    "comment": "settings category description"
   },
   {
     "term": "Back",
     "context": "Back",
-    "reference": "Modules/SettingsView.qml:230",
-    "comment": "tooltip on the button leaving the settings page"
+    "reference": "Modules/SettingsView.qml:149",
+    "comment": "tooltip on the button leaving a settings page"
   },
   {
     "term": "Blue",
     "context": "Blue",
-    "reference": "Modules/SettingsView.qml:45",
+    "reference": "Modules/SettingsView.qml:109",
     "comment": "color palette name"
   },
   {
     "term": "Cancel",
     "context": "Cancel",
-    "reference": "Modules/Dialogs/PromptDialog.qml:48, Modules/Dialogs/InputDialog.qml:57",
+    "reference": "Modules/Dialogs/PromptDialog.qml:53, Modules/Dialogs/InputDialog.qml:57",
     "comment": "dialog button to cancel"
   },
   {
     "term": "Cannot Save in %1",
     "context": "Cannot Save in %1",
-    "reference": "Services/Documents.qml:496",
+    "reference": "Services/Documents.qml:643",
     "comment": "dialog title; %1 is a text encoding"
   },
   {
@@ -236,595 +272,907 @@
   {
     "term": "Cannot open %1.",
     "context": "Cannot open %1.",
-    "reference": "Services/Documents.qml:297",
+    "reference": "Services/Documents.qml:349",
     "comment": "error opening a file; %1 is a file name"
   },
   {
     "term": "Cannot read %1.",
     "context": "Cannot read %1.",
-    "reference": "Services/Documents.qml:295",
+    "reference": "Services/Documents.qml:347",
     "comment": "error opening a file; %1 is a file name"
+  },
+  {
+    "term": "Change Case",
+    "context": "Change Case",
+    "reference": "Modules/Editor/SpellMenu.qml:253",
+    "comment": "editor context menu, submenu"
   },
   {
     "term": "Change Color",
     "context": "Change Color",
-    "reference": "Modules/SettingsView.qml:456",
+    "reference": "Modules/Settings/HighlightPage.qml:151",
     "comment": "tooltip on a syntax color swatch"
+  },
+  {
+    "term": "Changes and Errors",
+    "context": "Changes and Errors",
+    "reference": "Modules/Settings/HighlightPage.qml:28",
+    "comment": "syntax color group"
   },
   {
     "term": "Check Spelling",
     "context": "Check Spelling",
-    "reference": "Modules/SettingsView.qml:468",
+    "reference": "Modules/SettingsView.qml:435",
     "comment": "setting name"
   },
   {
     "term": "Check String Literals",
     "context": "Check String Literals",
-    "reference": "Modules/SettingsView.qml:486",
+    "reference": "Modules/SettingsView.qml:452",
     "comment": "setting name"
+  },
+  {
+    "term": "Clear Recent",
+    "context": "Clear Recent",
+    "reference": "Modules/MainWindow.qml:733",
+    "comment": "menu item that forgets the recent files"
   },
   {
     "term": "Close",
     "context": "Close",
-    "reference": "Modules/Editor/FindBar.qml:317",
-    "comment": "find bar button"
+    "reference": "Modules/TabStrip.qml:342, Modules/Editor/FindBar.qml:342",
+    "comment": "find bar button | tab menu item"
+  },
+  {
+    "term": "Close Others",
+    "context": "Close Others",
+    "reference": "Modules/TabStrip.qml:354",
+    "comment": "tab menu item"
   },
   {
     "term": "Close Tab",
     "context": "Close Tab",
-    "reference": "Modules/TabStrip.qml:238",
+    "reference": "Modules/TabStrip.qml:275",
     "comment": "tooltip on the button closing a tab"
   },
   {
     "term": "Close tab",
     "context": "Close tab",
-    "reference": "Modules/SettingsView.qml:28",
+    "reference": "Common/Shortcuts.qml:76",
     "comment": "shortcut description"
+  },
+  {
+    "term": "Close to the Right",
+    "context": "Close to the Right",
+    "reference": "Modules/TabStrip.qml:365",
+    "comment": "tab menu item"
   },
   {
     "term": "Closing the Window",
     "context": "Closing the Window",
-    "reference": "Modules/SettingsView.qml:401",
+    "reference": "Modules/SettingsView.qml:394",
     "comment": "setting name"
+  },
+  {
+    "term": "Code",
+    "context": "Code",
+    "reference": "Modules/Settings/HighlightPage.qml:20",
+    "comment": "syntax color group"
   },
   {
     "term": "Color for %1",
     "context": "Color for %1",
-    "reference": "Modules/MainWindow.qml:73",
+    "reference": "Modules/MainWindow.qml:127",
     "comment": "dialog title; %1 is a syntax role such as keyword"
   },
   {
     "term": "Colors",
     "context": "Colors",
-    "reference": "Modules/SettingsView.qml:286",
-    "comment": "setting name"
+    "reference": "Modules/SettingsView.qml:253, Modules/SettingsView.qml:264",
+    "comment": "setting name | settings section"
+  },
+  {
+    "term": "Colors follow the theme until you change them.",
+    "context": "Colors follow the theme until you change them.",
+    "reference": "Modules/Settings/HighlightPage.qml:96",
+    "comment": "setting description"
   },
   {
     "term": "Comment",
     "context": "Comment",
-    "reference": "Modules/SettingsView.qml:99",
+    "reference": "Modules/Settings/HighlightPage.qml:66",
     "comment": "syntax role"
   },
   {
     "term": "Constant",
     "context": "Constant",
-    "reference": "Modules/SettingsView.qml:75",
+    "reference": "Modules/Settings/HighlightPage.qml:42",
     "comment": "syntax role"
   },
   {
     "term": "Copy",
     "context": "Copy",
-    "reference": "Modules/Editor/SpellMenu.qml:99",
+    "reference": "Modules/Editor/SpellMenu.qml:224",
     "comment": "edit menu action"
+  },
+  {
+    "term": "Copy All",
+    "context": "Copy All",
+    "reference": "Modules/MainWindow.qml:567",
+    "comment": "window menu item that copies the whole document"
   },
   {
     "term": "Copy HTML",
     "context": "Copy HTML",
-    "reference": "Modules/Editor/MarkdownPreview.qml:155",
+    "reference": "Modules/Editor/MarkdownPreview.qml:159",
     "comment": "markdown preview button"
   },
   {
     "term": "Copy Path",
     "context": "Copy Path",
-    "reference": "Modules/StatusBar.qml:211",
-    "comment": "tooltip on the status bar path"
+    "reference": "Modules/StatusBar.qml:233, Modules/TabStrip.qml:389",
+    "comment": "tab menu item | tooltip on the status bar path"
   },
   {
     "term": "Copy Text",
     "context": "Copy Text",
-    "reference": "Modules/Editor/MarkdownPreview.qml:147",
+    "reference": "Modules/Editor/MarkdownPreview.qml:151",
     "comment": "markdown preview button"
   },
   {
     "term": "Copy the tabs and settings of the DMS notepad.",
     "context": "Copy the tabs and settings of the DMS notepad.",
-    "reference": "Modules/SettingsView.qml:410",
+    "reference": "Modules/SettingsView.qml:407",
     "comment": "setting description"
+  },
+  {
+    "term": "Copy the whole document",
+    "context": "Copy the whole document",
+    "reference": "Common/Shortcuts.qml:180",
+    "comment": "shortcut description"
   },
   {
     "term": "Coral",
     "context": "Coral",
-    "reference": "Modules/SettingsView.qml:59",
+    "reference": "Modules/SettingsView.qml:123",
     "comment": "color palette name"
   },
   {
     "term": "Could not import DMS notes.",
     "context": "Could not import DMS notes.",
-    "reference": "Services/Documents.qml:782",
+    "reference": "Services/Documents.qml:969",
     "comment": "error"
   },
   {
     "term": "Could not save %1.",
     "context": "Could not save %1.",
-    "reference": "Services/Documents.qml:523",
+    "reference": "Services/Documents.qml:671",
     "comment": "error saving a file; %1 is a file name"
   },
   {
     "term": "Could not save %1. Try again.",
     "context": "Could not save %1. Try again.",
-    "reference": "Services/Documents.qml:511",
+    "reference": "Services/Documents.qml:659",
     "comment": "error saving a file; %1 is a file name"
+  },
+  {
+    "term": "Count Words",
+    "context": "Count Words",
+    "reference": "Modules/StatusBar.qml:209",
+    "comment": "tooltip on the status bar counts"
+  },
+  {
+    "term": "Custom Colors",
+    "context": "Custom Colors",
+    "reference": "Modules/Settings/HighlightPage.qml:95",
+    "comment": "setting name"
   },
   {
     "term": "Cut",
     "context": "Cut",
-    "reference": "Modules/Editor/SpellMenu.qml:89",
+    "reference": "Modules/Editor/SpellMenu.qml:217",
     "comment": "edit menu action"
   },
   {
     "term": "Cyan",
     "context": "Cyan",
-    "reference": "Modules/SettingsView.qml:53",
+    "reference": "Modules/SettingsView.qml:117",
     "comment": "color palette name"
   },
   {
     "term": "Cycle the Markdown preview",
     "context": "Cycle the Markdown preview",
-    "reference": "Modules/SettingsView.qml:34",
+    "reference": "Common/Shortcuts.qml:278",
     "comment": "shortcut description"
   },
   {
     "term": "DMS Notes",
     "context": "DMS Notes",
-    "reference": "Modules/SettingsView.qml:409",
+    "reference": "Modules/SettingsView.qml:406",
     "comment": "setting name"
   },
   {
     "term": "Dark",
     "context": "Dark",
-    "reference": "Modules/SettingsView.qml:278",
+    "reference": "Modules/SettingsView.qml:257",
     "comment": "theme mode"
   },
   {
     "term": "Default",
     "context": "Default",
-    "reference": "Modules/SettingsView.qml:318",
+    "reference": "Modules/SettingsView.qml:304",
     "comment": "font family entry that follows the theme"
+  },
+  {
+    "term": "Delete Line",
+    "context": "Delete Line",
+    "reference": "Modules/MainWindow.qml:758",
+    "comment": "window menu item"
+  },
+  {
+    "term": "Delete Lines",
+    "context": "Delete Lines",
+    "reference": "Modules/Editor/SpellMenu.qml:42",
+    "comment": "editor context menu action"
+  },
+  {
+    "term": "Delete line",
+    "context": "Delete line",
+    "reference": "Common/Shortcuts.qml:201",
+    "comment": "shortcut description"
   },
   {
     "term": "Deleted Line",
     "context": "Deleted Line",
-    "reference": "Modules/SettingsView.qml:109",
+    "reference": "Modules/Settings/HighlightPage.qml:76",
     "comment": "syntax role"
+  },
+  {
+    "term": "Discard Changes",
+    "context": "Discard Changes",
+    "reference": "Services/Documents.qml:459",
+    "comment": "button that drops unsaved edits and reloads the file"
+  },
+  {
+    "term": "Discard Changes…",
+    "context": "Discard Changes…",
+    "reference": "Modules/MainWindow.qml:610",
+    "comment": "window menu item that reloads the file and drops unsaved edits"
   },
   {
     "term": "Discard Unsaved Changes?",
     "context": "Discard Unsaved Changes?",
-    "reference": "Services/Documents.qml:553, Services/Documents.qml:649",
+    "reference": "Services/Documents.qml:455, Services/Documents.qml:707, Services/Documents.qml:819",
     "comment": "dialog title"
   },
   {
     "term": "Discard and Quit",
     "context": "Discard and Quit",
-    "reference": "Services/Documents.qml:653",
+    "reference": "Services/Documents.qml:823",
     "comment": "button that quits and drops unsaved changes"
   },
   {
     "term": "Dismiss",
     "context": "Dismiss",
-    "reference": "Modules/ConflictBanner.qml:74, Modules/Dialogs/Toast.qml:96",
+    "reference": "Modules/ConflictBanner.qml:123, Modules/Dialogs/Toast.qml:96",
     "comment": "tooltip on a button that hides a banner"
   },
   {
     "term": "Don't Save",
     "context": "Don't Save",
-    "reference": "Modules/MainWindow.qml:208",
+    "reference": "Modules/MainWindow.qml:301",
     "comment": "button that closes a tab and drops its changes"
+  },
+  {
+    "term": "Duplicate",
+    "context": "Duplicate",
+    "reference": "Modules/Editor/SpellMenu.qml:34",
+    "comment": "editor context menu, duplicate the line or selection"
+  },
+  {
+    "term": "Duplicate Line",
+    "context": "Duplicate Line",
+    "reference": "Modules/MainWindow.qml:750",
+    "comment": "window menu item"
+  },
+  {
+    "term": "Duplicate line",
+    "context": "Duplicate line",
+    "reference": "Common/Shortcuts.qml:208",
+    "comment": "shortcut description"
   },
   {
     "term": "Dux Edit",
     "context": "Dux Edit",
-    "reference": "Modules/MainWindow.qml:96, Modules/MainWindow.qml:96",
+    "reference": "Modules/MainWindow.qml:251",
     "comment": "application name"
   },
   {
     "term": "Dux Edit could not complete the request.",
     "context": "Dux Edit could not complete the request.",
-    "reference": "Services/Documents.qml:410",
+    "reference": "Services/Documents.qml:557",
     "comment": "error when the backend refused a request"
   },
   {
     "term": "Dux Edit found %1 notes from the DMS notepad. Importing copies them; DMS keeps its own.",
     "context": "Dux Edit found %1 notes from the DMS notepad. Importing copies them; DMS keeps its own.",
-    "reference": "Services/Documents.qml:767",
+    "reference": "Services/Documents.qml:954",
     "comment": "dialog message; %1 is a count"
   },
   {
     "term": "Dux Edit lost the connection to its core.",
     "context": "Dux Edit lost the connection to its core.",
-    "reference": "Services/Documents.qml:408",
+    "reference": "Services/Documents.qml:555",
     "comment": "error when the backend process is unreachable"
+  },
+  {
+    "term": "Dux Edit lost the connection to its core. Copy your unsaved work elsewhere before closing.",
+    "context": "Dux Edit lost the connection to its core. Copy your unsaved work elsewhere before closing.",
+    "reference": "shell.qml:44",
+    "comment": "error when the window is closed while nothing can be saved"
+  },
+  {
+    "term": "Dux Edit lost the connection to its core. Nothing can be saved: copy your unsaved work elsewhere, then restart the app.",
+    "context": "Dux Edit lost the connection to its core. Nothing can be saved: copy your unsaved work elsewhere, then restart the app.",
+    "reference": "Modules/MainWindow.qml:437",
+    "comment": "banner shown when the backend process died"
   },
   {
     "term": "Dux Shell",
     "context": "Dux Shell",
-    "reference": "Modules/SettingsView.qml:288",
+    "reference": "Modules/SettingsView.qml:266",
     "comment": "color source"
   },
   {
     "term": "Dux Shell colors are used when the shell publishes them.",
     "context": "Dux Shell colors are used when the shell publishes them.",
-    "reference": "Modules/SettingsView.qml:287",
+    "reference": "Modules/SettingsView.qml:265",
     "comment": "setting description"
+  },
+  {
+    "term": "Edit",
+    "context": "Edit",
+    "reference": "Common/Shortcuts.qml:22",
+    "comment": "shortcut group"
+  },
+  {
+    "term": "Edit Anyway",
+    "context": "Edit Anyway",
+    "reference": "Modules/ConflictBanner.qml:89",
+    "comment": "banner button that allows editing a file the user cannot write"
   },
   {
     "term": "Editor",
     "context": "Editor",
-    "reference": "Modules/SettingsView.qml:306",
-    "comment": "settings section"
+    "reference": "Modules/SettingsView.qml:35",
+    "comment": "settings category"
   },
   {
     "term": "Emphasis",
     "context": "Emphasis",
-    "reference": "Modules/SettingsView.qml:103",
+    "reference": "Modules/Settings/HighlightPage.qml:70",
     "comment": "syntax role"
   },
   {
     "term": "Encoding",
     "context": "Encoding",
-    "reference": "Modules/StatusBar.qml:266",
+    "reference": "Modules/StatusBar.qml:301",
     "comment": "tooltip on the status bar encoding"
   },
   {
     "term": "Error",
     "context": "Error",
-    "reference": "Modules/SettingsView.qml:111",
+    "reference": "Modules/Settings/HighlightPage.qml:78",
     "comment": "syntax role"
   },
   {
     "term": "Escape Sequence",
     "context": "Escape Sequence",
-    "reference": "Modules/SettingsView.qml:89",
+    "reference": "Modules/Settings/HighlightPage.qml:56",
     "comment": "syntax role"
+  },
+  {
+    "term": "Every shortcut, searchable",
+    "context": "Every shortcut, searchable",
+    "reference": "Modules/SettingsView.qml:66",
+    "comment": "settings category description"
   },
   {
     "term": "Files",
     "context": "Files",
-    "reference": "Modules/SettingsView.qml:383",
-    "comment": "settings section"
+    "reference": "Modules/SettingsView.qml:41, Common/Shortcuts.qml:14",
+    "comment": "settings category | shortcut group"
   },
   {
     "term": "Find",
     "context": "Find",
-    "reference": "Modules/SettingsView.qml:31, Modules/MainWindow.qml:403, Modules/Editor/FindBar.qml:253",
+    "reference": "Modules/MainWindow.qml:619, Common/Shortcuts.qml:242, Modules/Editor/FindBar.qml:278",
     "comment": "find bar placeholder | shortcut description | window menu item"
+  },
+  {
+    "term": "Find and Navigate",
+    "context": "Find and Navigate",
+    "reference": "Common/Shortcuts.qml:30",
+    "comment": "shortcut group"
+  },
+  {
+    "term": "Find next",
+    "context": "Find next",
+    "reference": "Common/Shortcuts.qml:254",
+    "comment": "shortcut description"
+  },
+  {
+    "term": "Find previous",
+    "context": "Find previous",
+    "reference": "Common/Shortcuts.qml:260",
+    "comment": "shortcut description"
   },
   {
     "term": "Follow System",
     "context": "Follow System",
-    "reference": "Modules/SettingsView.qml:278, Modules/SettingsView.qml:479",
+    "reference": "Modules/SettingsView.qml:257, Modules/SettingsView.qml:445",
     "comment": "spellcheck language | theme mode"
+  },
+  {
+    "term": "Font",
+    "context": "Font",
+    "reference": "Modules/SettingsView.qml:293",
+    "comment": "settings section"
   },
   {
     "term": "Font Family",
     "context": "Font Family",
-    "reference": "Modules/SettingsView.qml:316",
+    "reference": "Modules/SettingsView.qml:302",
     "comment": "setting name"
   },
   {
     "term": "Font Size",
     "context": "Font Size",
-    "reference": "Modules/SettingsView.qml:325",
+    "reference": "Modules/SettingsView.qml:311",
     "comment": "setting name"
+  },
+  {
+    "term": "Font, line numbers, wrapping and indentation",
+    "context": "Font, line numbers, wrapping and indentation",
+    "reference": "Modules/SettingsView.qml:36",
+    "comment": "settings category description"
+  },
+  {
+    "term": "Full Screen",
+    "context": "Full Screen",
+    "reference": "Modules/MainWindow.qml:654",
+    "comment": "window menu item"
+  },
+  {
+    "term": "Full screen",
+    "context": "Full screen",
+    "reference": "Common/Shortcuts.qml:284",
+    "comment": "shortcut description"
   },
   {
     "term": "Function",
     "context": "Function",
-    "reference": "Modules/SettingsView.qml:77",
+    "reference": "Modules/Settings/HighlightPage.qml:44",
     "comment": "syntax role"
   },
   {
     "term": "Go",
     "context": "Go",
-    "reference": "Modules/MainWindow.qml:51",
+    "reference": "Modules/MainWindow.qml:105",
     "comment": "button that moves the cursor to a line"
   },
   {
     "term": "Go to Line",
     "context": "Go to Line",
-    "reference": "Modules/MainWindow.qml:53",
+    "reference": "Modules/MainWindow.qml:107",
     "comment": "dialog title"
   },
   {
     "term": "Go to Line…",
     "context": "Go to Line…",
-    "reference": "Modules/MainWindow.qml:423",
+    "reference": "Modules/MainWindow.qml:635",
     "comment": "window menu item"
   },
   {
     "term": "Go to line",
     "context": "Go to line",
-    "reference": "Modules/SettingsView.qml:33",
+    "reference": "Common/Shortcuts.qml:266",
+    "comment": "shortcut description"
+  },
+  {
+    "term": "Go to tab 1 to 8",
+    "context": "Go to tab 1 to 8",
+    "reference": "Common/Shortcuts.qml:114",
+    "comment": "shortcut description"
+  },
+  {
+    "term": "Go to the first character of the line, then its start",
+    "context": "Go to the first character of the line, then its start",
+    "reference": "Common/Shortcuts.qml:194",
+    "comment": "shortcut description"
+  },
+  {
+    "term": "Go to the last tab",
+    "context": "Go to the last tab",
+    "reference": "Common/Shortcuts.qml:160",
     "comment": "shortcut description"
   },
   {
     "term": "Green",
     "context": "Green",
-    "reference": "Modules/SettingsView.qml:47",
+    "reference": "Modules/SettingsView.qml:111",
     "comment": "color palette name"
   },
   {
     "term": "HTML copied",
     "context": "HTML copied",
-    "reference": "Modules/Editor/MarkdownPreview.qml:159",
+    "reference": "Modules/Editor/MarkdownPreview.qml:163",
     "comment": "toast after copying the preview HTML"
   },
   {
     "term": "Heading",
     "context": "Heading",
-    "reference": "Modules/SettingsView.qml:101",
+    "reference": "Modules/Settings/HighlightPage.qml:68",
     "comment": "syntax role"
   },
   {
     "term": "Highlight Anyway",
     "context": "Highlight Anyway",
-    "reference": "Modules/StatusBar.qml:247",
+    "reference": "Modules/StatusBar.qml:269",
     "comment": "status bar button that highlights a large file"
+  },
+  {
+    "term": "Highlight Current Line",
+    "context": "Highlight Current Line",
+    "reference": "Modules/SettingsView.qml:329",
+    "comment": "setting name"
   },
   {
     "term": "Highlighting",
     "context": "Highlighting",
-    "reference": "Modules/SettingsView.qml:421",
-    "comment": "settings section"
+    "reference": "Modules/SettingsView.qml:47",
+    "comment": "settings category"
   },
   {
     "term": "Highlighting off for large files",
     "context": "Highlighting off for large files",
-    "reference": "Modules/StatusBar.qml:242",
+    "reference": "Modules/StatusBar.qml:264",
     "comment": "status bar notice"
   },
   {
     "term": "How a Markdown document opens.",
     "context": "How a Markdown document opens.",
-    "reference": "Modules/SettingsView.qml:374",
+    "reference": "Modules/SettingsView.qml:364",
     "comment": "setting description"
   },
   {
     "term": "Ignore",
     "context": "Ignore",
-    "reference": "Modules/Editor/SpellMenu.qml:75",
+    "reference": "Modules/Editor/SpellMenu.qml:187",
     "comment": "spelling menu action, for this session"
   },
   {
     "term": "Import",
     "context": "Import",
-    "reference": "Modules/SettingsView.qml:413, Services/Documents.qml:770",
-    "comment": "button that imports DMS notes"
+    "reference": "Modules/SettingsView.qml:403, Modules/SettingsView.qml:410, Services/Documents.qml:957",
+    "comment": "button that imports DMS notes | settings section"
   },
   {
     "term": "Import DMS Notes?",
     "context": "Import DMS Notes?",
-    "reference": "Services/Documents.qml:766",
+    "reference": "Services/Documents.qml:953",
     "comment": "dialog title"
   },
   {
     "term": "Imported %1 DMS notes.",
     "context": "Imported %1 DMS notes.",
-    "reference": "Services/Documents.qml:819",
+    "reference": "Services/Documents.qml:1006",
     "comment": "notice; %1 is a count"
+  },
+  {
+    "term": "Indent",
+    "context": "Indent",
+    "reference": "Modules/Editor/SpellMenu.qml:66",
+    "comment": "editor context menu action"
   },
   {
     "term": "Inline Code",
     "context": "Inline Code",
-    "reference": "Modules/SettingsView.qml:115",
+    "reference": "Modules/Settings/HighlightPage.qml:82",
     "comment": "syntax role"
   },
   {
     "term": "Insert Spaces",
     "context": "Insert Spaces",
-    "reference": "Modules/SettingsView.qml:365",
+    "reference": "Modules/SettingsView.qml:352",
     "comment": "setting name"
   },
   {
     "term": "Inserted Line",
     "context": "Inserted Line",
-    "reference": "Modules/SettingsView.qml:107",
+    "reference": "Modules/Settings/HighlightPage.qml:74",
     "comment": "syntax role"
   },
   {
     "term": "Install hunspell to check spelling.",
     "context": "Install hunspell to check spelling.",
-    "reference": "Modules/SettingsView.qml:469",
+    "reference": "Modules/SettingsView.qml:436",
     "comment": "setting description"
+  },
+  {
+    "term": "Installed plugins and their settings",
+    "context": "Installed plugins and their settings",
+    "reference": "Modules/SettingsView.qml:60",
+    "comment": "settings category description"
   },
   {
     "term": "Invalid regular expression",
     "context": "Invalid regular expression",
-    "reference": "Modules/Editor/FindBar.qml:81",
+    "reference": "Modules/Editor/FindBar.qml:98",
     "comment": "find bar error"
+  },
+  {
+    "term": "Join Lines",
+    "context": "Join Lines",
+    "reference": "Modules/MainWindow.qml:790, Modules/Editor/SpellMenu.qml:82",
+    "comment": "editor context menu action | window menu item"
+  },
+  {
+    "term": "Join lines",
+    "context": "Join lines",
+    "reference": "Common/Shortcuts.qml:236",
+    "comment": "shortcut description"
   },
   {
     "term": "Keep My Edits",
     "context": "Keep My Edits",
-    "reference": "Modules/ConflictBanner.qml:63",
+    "reference": "Modules/ConflictBanner.qml:81",
     "comment": "conflict banner button that overwrites the file on disk"
   },
   {
     "term": "Keeps It Running in the Background",
     "context": "Keeps It Running in the Background",
-    "reference": "Modules/SettingsView.qml:402",
+    "reference": "Modules/SettingsView.qml:395",
     "comment": "close behavior"
   },
   {
     "term": "Keyboard Shortcuts",
     "context": "Keyboard Shortcuts",
-    "reference": "Modules/SettingsView.qml:503",
-    "comment": "settings section"
+    "reference": "Modules/SettingsView.qml:65",
+    "comment": "settings category"
   },
   {
     "term": "Keyword",
     "context": "Keyword",
-    "reference": "Modules/SettingsView.qml:71",
+    "reference": "Modules/Settings/HighlightPage.qml:38",
     "comment": "syntax role"
   },
   {
     "term": "Language",
     "context": "Language",
-    "reference": "Modules/SettingsView.qml:476, Modules/StatusBar.qml:287",
+    "reference": "Modules/SettingsView.qml:442, Modules/StatusBar.qml:322",
     "comment": "setting name | tooltip on the status bar language"
+  },
+  {
+    "term": "Language and what gets checked",
+    "context": "Language and what gets checked",
+    "reference": "Modules/SettingsView.qml:54",
+    "comment": "settings category description"
   },
   {
     "term": "Light",
     "context": "Light",
-    "reference": "Modules/SettingsView.qml:278",
+    "reference": "Modules/SettingsView.qml:257",
     "comment": "theme mode"
   },
   {
     "term": "Line Endings",
     "context": "Line Endings",
-    "reference": "Modules/StatusBar.qml:275",
+    "reference": "Modules/StatusBar.qml:310",
     "comment": "tooltip on the status bar line endings"
   },
   {
     "term": "Line Numbers",
     "context": "Line Numbers",
-    "reference": "Modules/SettingsView.qml:337",
+    "reference": "Modules/SettingsView.qml:323",
     "comment": "setting name"
   },
   {
     "term": "Line or line:column",
     "context": "Line or line:column",
-    "reference": "Modules/MainWindow.qml:52",
+    "reference": "Modules/MainWindow.qml:106",
     "comment": "placeholder of the go to line field"
+  },
+  {
+    "term": "Lines",
+    "context": "Lines",
+    "reference": "Common/Shortcuts.qml:26, Modules/Editor/SpellMenu.qml:246",
+    "comment": "editor context menu, submenu of line actions | shortcut group"
+  },
+  {
+    "term": "Lines and Case",
+    "context": "Lines and Case",
+    "reference": "Modules/MainWindow.qml:576",
+    "comment": "window menu item opening line and letter case commands"
   },
   {
     "term": "Link",
     "context": "Link",
-    "reference": "Modules/SettingsView.qml:113",
+    "reference": "Modules/Settings/HighlightPage.qml:80",
     "comment": "syntax role"
   },
   {
     "term": "Ln %1, Col %2",
     "context": "Ln %1, Col %2",
-    "reference": "Modules/StatusBar.qml:114",
+    "reference": "Modules/StatusBar.qml:117",
     "comment": "status bar cursor position"
   },
   {
     "term": "Looking up suggestions…",
     "context": "Looking up suggestions…",
-    "reference": "Modules/Editor/SpellMenu.qml:58",
+    "reference": "Modules/Editor/SpellMenu.qml:170",
     "comment": "spelling menu, while suggestions load"
+  },
+  {
+    "term": "Markdown",
+    "context": "Markdown",
+    "reference": "Modules/SettingsView.qml:360",
+    "comment": "settings section"
   },
   {
     "term": "Markdown Preview",
     "context": "Markdown Preview",
-    "reference": "Modules/SettingsView.qml:373",
+    "reference": "Modules/SettingsView.qml:363",
     "comment": "setting name"
+  },
+  {
+    "term": "Markup",
+    "context": "Markup",
+    "reference": "Modules/Settings/HighlightPage.qml:24",
+    "comment": "syntax color group"
   },
   {
     "term": "Match case",
     "context": "Match case",
-    "reference": "Modules/Editor/FindBar.qml:272",
+    "reference": "Modules/Editor/FindBar.qml:297",
     "comment": "find bar toggle"
   },
   {
     "term": "Menu",
     "context": "Menu",
-    "reference": "Modules/MainWindow.qml:295",
+    "reference": "Modules/MainWindow.qml:388",
     "comment": "tooltip on the window menu button"
   },
   {
     "term": "Mixed",
     "context": "Mixed",
-    "reference": "Modules/StatusBar.qml:274",
+    "reference": "Modules/StatusBar.qml:309",
     "comment": "status bar line endings when a file mixes them"
   },
   {
     "term": "Mode",
     "context": "Mode",
-    "reference": "Modules/SettingsView.qml:267",
+    "reference": "Modules/SettingsView.qml:243",
     "comment": "setting name"
   },
   {
     "term": "Monochrome",
     "context": "Monochrome",
-    "reference": "Modules/SettingsView.qml:61",
+    "reference": "Modules/SettingsView.qml:125",
     "comment": "color palette name"
   },
   {
     "term": "Monospace Font",
     "context": "Monospace Font",
-    "reference": "Modules/SettingsView.qml:309",
+    "reference": "Modules/SettingsView.qml:296",
     "comment": "setting name"
+  },
+  {
+    "term": "Move Down",
+    "context": "Move Down",
+    "reference": "Modules/Editor/SpellMenu.qml:58",
+    "comment": "editor context menu, move lines down"
+  },
+  {
+    "term": "Move Lines Down",
+    "context": "Move Lines Down",
+    "reference": "Modules/MainWindow.qml:774",
+    "comment": "window menu item"
+  },
+  {
+    "term": "Move Lines Up",
+    "context": "Move Lines Up",
+    "reference": "Modules/MainWindow.qml:766",
+    "comment": "window menu item"
+  },
+  {
+    "term": "Move Up",
+    "context": "Move Up",
+    "reference": "Modules/Editor/SpellMenu.qml:50",
+    "comment": "editor context menu, move lines up"
+  },
+  {
+    "term": "Move lines down",
+    "context": "Move lines down",
+    "reference": "Common/Shortcuts.qml:222",
+    "comment": "shortcut description"
+  },
+  {
+    "term": "Move lines up",
+    "context": "Move lines up",
+    "reference": "Common/Shortcuts.qml:215",
+    "comment": "shortcut description"
+  },
+  {
+    "term": "Move tab left",
+    "context": "Move tab left",
+    "reference": "Common/Shortcuts.qml:101",
+    "comment": "shortcut description"
+  },
+  {
+    "term": "Move tab right",
+    "context": "Move tab right",
+    "reference": "Common/Shortcuts.qml:107",
+    "comment": "shortcut description"
   },
   {
     "term": "Never",
     "context": "Never",
-    "reference": "Modules/SettingsView.qml:346",
+    "reference": "Modules/SettingsView.qml:337",
     "comment": "wrap mode"
   },
   {
     "term": "New",
     "context": "New",
-    "reference": "Modules/MainWindow.qml:263",
+    "reference": "Modules/MainWindow.qml:356",
     "comment": "tooltip on the button creating a document"
   },
   {
     "term": "New Tab",
     "context": "New Tab",
-    "reference": "Modules/TabStrip.qml:299",
+    "reference": "Modules/TabStrip.qml:327",
     "comment": "tooltip on the button opening a new tab"
   },
   {
     "term": "New document",
     "context": "New document",
-    "reference": "Modules/SettingsView.qml:24",
+    "reference": "Common/Shortcuts.qml:45",
     "comment": "shortcut description"
   },
   {
     "term": "Next match",
     "context": "Next match",
-    "reference": "Modules/Editor/FindBar.qml:302",
+    "reference": "Modules/Editor/FindBar.qml:327",
     "comment": "find bar button"
   },
   {
     "term": "Next tab",
     "context": "Next tab",
-    "reference": "Modules/SettingsView.qml:29",
+    "reference": "Common/Shortcuts.qml:88",
     "comment": "shortcut description"
   },
   {
     "term": "No DMS notes found.",
     "context": "No DMS notes found.",
-    "reference": "Services/Documents.qml:802",
+    "reference": "Services/Documents.qml:989",
     "comment": "notice"
   },
   {
     "term": "No dictionary is installed for this language.",
     "context": "No dictionary is installed for this language.",
-    "reference": "Modules/SettingsView.qml:469",
+    "reference": "Modules/SettingsView.qml:436",
     "comment": "setting description"
   },
   {
     "term": "No file chooser is available. Install a desktop portal.",
     "context": "No file chooser is available. Install a desktop portal.",
-    "reference": "Services/Documents.qml:424",
+    "reference": "Services/Documents.qml:571",
     "comment": "error when the portal file chooser is missing"
   },
   {
     "term": "No matches",
     "context": "No matches",
-    "reference": "Modules/Editor/FindBar.qml:39",
+    "reference": "Modules/Editor/FindBar.qml:41",
     "comment": "find bar, the query matches nothing"
   },
   {
@@ -834,21 +1182,33 @@
     "comment": "plugin settings empty state; %1 is a folder"
   },
   {
+    "term": "No shortcuts match.",
+    "context": "No shortcuts match.",
+    "reference": "Modules/Settings/ShortcutsPage.qml:47",
+    "comment": "empty state of the shortcut search"
+  },
+  {
     "term": "No suggestions",
     "context": "No suggestions",
-    "reference": "Modules/Editor/SpellMenu.qml:58",
+    "reference": "Modules/Editor/SpellMenu.qml:170",
     "comment": "spelling menu"
   },
   {
     "term": "Not Now",
     "context": "Not Now",
-    "reference": "Services/Documents.qml:774",
+    "reference": "Services/Documents.qml:961",
     "comment": "button that declines an offer"
+  },
+  {
+    "term": "Not Writable",
+    "context": "Not Writable",
+    "reference": "Modules/StatusBar.qml:276",
+    "comment": "status bar state of a file the user may not write"
   },
   {
     "term": "Number",
     "context": "Number",
-    "reference": "Modules/SettingsView.qml:93",
+    "reference": "Modules/Settings/HighlightPage.qml:60",
     "comment": "syntax role"
   },
   {
@@ -858,82 +1218,94 @@
     "comment": "dialog button that confirms"
   },
   {
+    "term": "OVR",
+    "context": "OVR",
+    "reference": "Modules/StatusBar.qml:289",
+    "comment": "status bar marker for overwrite mode; keep it short"
+  },
+  {
     "term": "Off",
     "context": "Off",
-    "reference": "Modules/SettingsView.qml:375",
+    "reference": "Modules/SettingsView.qml:365",
     "comment": "markdown preview mode"
   },
   {
     "term": "Open",
     "context": "Open",
-    "reference": "Modules/MainWindow.qml:226, Modules/MainWindow.qml:270, Services/Documents.qml:395",
+    "reference": "Modules/MainWindow.qml:319, Modules/MainWindow.qml:363, Services/Documents.qml:542",
     "comment": "button that opens a file | file chooser title | tooltip on the button opening files"
   },
   {
     "term": "Open Large File?",
     "context": "Open Large File?",
-    "reference": "Modules/MainWindow.qml:222",
+    "reference": "Modules/MainWindow.qml:315",
     "comment": "dialog title"
+  },
+  {
+    "term": "Open Recent",
+    "context": "Open Recent",
+    "reference": "Modules/MainWindow.qml:586",
+    "comment": "window menu item"
   },
   {
     "term": "Open as Administrator",
     "context": "Open as Administrator",
-    "reference": "Services/Documents.qml:260",
+    "reference": "Services/Documents.qml:312",
     "comment": "button that reads a file with administrator rights"
   },
   {
     "term": "Open files",
     "context": "Open files",
-    "reference": "Modules/SettingsView.qml:25",
+    "reference": "Common/Shortcuts.qml:51",
     "comment": "shortcut description"
   },
   {
     "term": "Opened as administrator. This document has no crash recovery.",
     "context": "Opened as administrator. This document has no crash recovery.",
-    "reference": "Services/Documents.qml:243",
+    "reference": "Services/Documents.qml:295",
     "comment": "notice when a file was read with administrator rights"
   },
   {
     "term": "Operator",
     "context": "Operator",
-    "reference": "Modules/SettingsView.qml:95",
+    "reference": "Modules/Settings/HighlightPage.qml:62",
     "comment": "syntax role"
   },
   {
     "term": "Orange",
     "context": "Orange",
-    "reference": "Modules/SettingsView.qml:49",
+    "reference": "Modules/SettingsView.qml:113",
     "comment": "color palette name"
   },
   {
     "term": "Paste",
     "context": "Paste",
-    "reference": "Modules/Editor/SpellMenu.qml:109",
+    "reference": "Modules/Editor/SpellMenu.qml:231",
     "comment": "edit menu action"
   },
   {
     "term": "Path copied",
     "context": "Path copied",
-    "reference": "Modules/StatusBar.qml:214",
+    "reference": "Modules/StatusBar.qml:236, Modules/TabStrip.qml:394",
     "comment": "notice after copying a file path"
   },
   {
     "term": "Permission Denied",
     "context": "Permission Denied",
-    "reference": "Services/Documents.qml:256, Services/Documents.qml:482",
+    "reference": "Services/Documents.qml:308, Services/Documents.qml:629",
     "comment": "dialog title when a file cannot be read | dialog title when a file cannot be written"
   },
   {
     "term": "Pink",
     "context": "Pink",
-    "reference": "Modules/SettingsView.qml:55",
+    "reference": "Modules/SettingsView.qml:119",
     "comment": "color palette name"
   },
   {
     "term": "Plugins",
     "context": "Plugins",
-    "reference": "Modules/SettingsView.qml:495",
-    "comment": "settings section"
+    "reference": "Modules/SettingsView.qml:59, Modules/Settings/ShortcutsPage.qml:23",
+    "comment": "settings category | shortcut group"
   },
   {
     "term": "Plugins run with your user's privileges. Only enable plugins you trust.",
@@ -944,145 +1316,187 @@
   {
     "term": "Preprocessor",
     "context": "Preprocessor",
-    "reference": "Modules/SettingsView.qml:83",
+    "reference": "Modules/Settings/HighlightPage.qml:50",
     "comment": "syntax role"
   },
   {
     "term": "Preset",
     "context": "Preset",
-    "reference": "Modules/SettingsView.qml:288, Modules/SettingsView.qml:296",
+    "reference": "Modules/SettingsView.qml:266, Modules/SettingsView.qml:273",
     "comment": "color source | setting name"
   },
   {
     "term": "Preview",
     "context": "Preview",
-    "reference": "Modules/MainWindow.qml:286",
+    "reference": "Modules/MainWindow.qml:379",
     "comment": "tooltip on the button cycling the Markdown preview"
   },
   {
     "term": "Preview Only",
     "context": "Preview Only",
-    "reference": "Modules/SettingsView.qml:375",
+    "reference": "Modules/SettingsView.qml:365",
     "comment": "markdown preview mode"
   },
   {
     "term": "Previous match",
     "context": "Previous match",
-    "reference": "Modules/Editor/FindBar.qml:295",
+    "reference": "Modules/Editor/FindBar.qml:320",
     "comment": "find bar button"
   },
   {
     "term": "Previous tab",
     "context": "Previous tab",
-    "reference": "Modules/SettingsView.qml:30",
+    "reference": "Common/Shortcuts.qml:95",
     "comment": "shortcut description"
   },
   {
     "term": "Punctuation",
     "context": "Punctuation",
-    "reference": "Modules/SettingsView.qml:97",
+    "reference": "Modules/Settings/HighlightPage.qml:64",
     "comment": "syntax role"
   },
   {
     "term": "Purple",
     "context": "Purple",
-    "reference": "Modules/SettingsView.qml:43",
+    "reference": "Modules/SettingsView.qml:107",
     "comment": "color palette name"
+  },
+  {
+    "term": "Quit",
+    "context": "Quit",
+    "reference": "Modules/MainWindow.qml:681, Common/Shortcuts.qml:69",
+    "comment": "shortcut description | window menu item"
   },
   {
     "term": "Quits Dux Edit",
     "context": "Quits Dux Edit",
-    "reference": "Modules/SettingsView.qml:402",
+    "reference": "Modules/SettingsView.qml:395",
     "comment": "close behavior"
+  },
+  {
+    "term": "Read-Only",
+    "context": "Read-Only",
+    "reference": "Modules/StatusBar.qml:276",
+    "comment": "status bar state of a document that cannot be edited as it is"
+  },
+  {
+    "term": "Read-only: this file's encoding cannot write some of its bytes back. Save it as UTF-8 to edit it.",
+    "context": "Read-only: this file's encoding cannot write some of its bytes back. Save it as UTF-8 to edit it.",
+    "reference": "Modules/ConflictBanner.qml:31",
+    "comment": "banner message for a file opened read-only because of its encoding"
   },
   {
     "term": "Red",
     "context": "Red",
-    "reference": "Modules/SettingsView.qml:51",
+    "reference": "Modules/SettingsView.qml:115",
     "comment": "color palette name"
+  },
+  {
+    "term": "Redo",
+    "context": "Redo",
+    "reference": "Modules/MainWindow.qml:559, Common/Shortcuts.qml:174, Modules/Editor/SpellMenu.qml:208",
+    "comment": "edit menu action | shortcut description | window menu item"
   },
   {
     "term": "Regular Expression",
     "context": "Regular Expression",
-    "reference": "Modules/SettingsView.qml:91",
+    "reference": "Modules/Settings/HighlightPage.qml:58",
     "comment": "syntax role"
   },
   {
     "term": "Regular expression",
     "context": "Regular expression",
-    "reference": "Modules/Editor/FindBar.qml:288",
+    "reference": "Modules/Editor/FindBar.qml:313",
     "comment": "find bar toggle"
   },
   {
     "term": "Reload From Disk",
     "context": "Reload From Disk",
-    "reference": "Modules/ConflictBanner.qml:55",
+    "reference": "Modules/ConflictBanner.qml:72",
     "comment": "conflict banner button that drops unsaved edits"
   },
   {
     "term": "Rename",
     "context": "Rename",
-    "reference": "Modules/MainWindow.qml:62",
+    "reference": "Modules/MainWindow.qml:116",
     "comment": "button that renames a document"
   },
   {
     "term": "Rename Document",
     "context": "Rename Document",
-    "reference": "Modules/MainWindow.qml:64",
+    "reference": "Modules/MainWindow.qml:118",
     "comment": "dialog title"
+  },
+  {
+    "term": "Rename…",
+    "context": "Rename…",
+    "reference": "Modules/TabStrip.qml:401",
+    "comment": "tab menu item that names an unsaved document"
   },
   {
     "term": "Reopen",
     "context": "Reopen",
-    "reference": "Services/Documents.qml:557",
+    "reference": "Services/Documents.qml:711",
     "comment": "button that reopens a file with another encoding"
+  },
+  {
+    "term": "Reopen Closed Tab",
+    "context": "Reopen Closed Tab",
+    "reference": "Modules/MainWindow.qml:593, Modules/TabStrip.qml:376",
+    "comment": "tab menu item | window menu item"
+  },
+  {
+    "term": "Reopen closed tab",
+    "context": "Reopen closed tab",
+    "reference": "Common/Shortcuts.qml:82",
+    "comment": "shortcut description"
   },
   {
     "term": "Reopen the last tabs on start. Unsaved work is always kept.",
     "context": "Reopen the last tabs on start. Unsaved work is always kept.",
-    "reference": "Modules/SettingsView.qml:394",
+    "reference": "Modules/SettingsView.qml:388",
     "comment": "setting description"
   },
   {
     "term": "Reopen with Encoding",
     "context": "Reopen with Encoding",
-    "reference": "Modules/StatusBar.qml:355",
+    "reference": "Modules/StatusBar.qml:390",
     "comment": "status bar encoding menu section"
   },
   {
     "term": "Reopening %1 with another encoding discards your unsaved changes.",
     "context": "Reopening %1 with another encoding discards your unsaved changes.",
-    "reference": "Services/Documents.qml:554",
+    "reference": "Services/Documents.qml:708",
     "comment": "dialog message; %1 is a file name"
   },
   {
     "term": "Replace",
     "context": "Replace",
-    "reference": "Modules/SettingsView.qml:32, Modules/MainWindow.qml:413, Services/Documents.qml:464, Modules/Editor/FindBar.qml:311, Modules/Editor/FindBar.qml:343",
+    "reference": "Modules/MainWindow.qml:627, Services/Documents.qml:611, Common/Shortcuts.qml:248, Modules/Editor/FindBar.qml:336, Modules/Editor/FindBar.qml:368",
     "comment": "button that overwrites an existing file | find bar button | shortcut description | window menu item"
   },
   {
     "term": "Replace All",
     "context": "Replace All",
-    "reference": "Modules/Editor/FindBar.qml:350",
+    "reference": "Modules/Editor/FindBar.qml:375",
     "comment": "find bar button"
   },
   {
     "term": "Replace File?",
     "context": "Replace File?",
-    "reference": "Services/Documents.qml:460",
+    "reference": "Services/Documents.qml:607",
     "comment": "dialog title when saving over an existing file"
   },
   {
     "term": "Replace with",
     "context": "Replace with",
-    "reference": "Modules/Editor/FindBar.qml:339",
+    "reference": "Modules/Editor/FindBar.qml:364",
     "comment": "find bar replacement placeholder"
   },
   {
     "term": "Replaced %1 matches",
     "context": "Replaced %1 matches",
-    "reference": "Modules/Editor/FindBar.qml:202",
+    "reference": "Modules/Editor/FindBar.qml:227",
     "comment": "find bar, after replace all"
   },
   {
@@ -1092,315 +1506,471 @@
     "comment": "button that looks for newly installed plugins"
   },
   {
+    "term": "Reset All",
+    "context": "Reset All",
+    "reference": "Modules/Settings/HighlightPage.qml:100",
+    "comment": "button that drops every custom syntax color"
+  },
+  {
     "term": "Reset zoom",
     "context": "Reset zoom",
-    "reference": "Modules/SettingsView.qml:36",
+    "reference": "Common/Shortcuts.qml:303",
     "comment": "shortcut description"
   },
   {
     "term": "Restore",
     "context": "Restore",
-    "reference": "Services/Documents.qml:736",
+    "reference": "Services/Documents.qml:923",
     "comment": "button that restores unsaved documents"
   },
   {
     "term": "Restore Session",
     "context": "Restore Session",
-    "reference": "Modules/SettingsView.qml:393",
+    "reference": "Modules/SettingsView.qml:387",
     "comment": "setting name"
   },
   {
     "term": "Save",
     "context": "Save",
-    "reference": "Modules/ConflictBanner.qml:63, Modules/SettingsView.qml:26, Modules/MainWindow.qml:213, Modules/MainWindow.qml:278",
+    "reference": "Modules/ConflictBanner.qml:81, Modules/MainWindow.qml:306, Modules/MainWindow.qml:371, Common/Shortcuts.qml:57",
     "comment": "button that saves a document | conflict banner button that writes the file again | shortcut description | tooltip on the save button"
   },
   {
     "term": "Save As",
     "context": "Save As",
-    "reference": "Services/Documents.qml:380",
+    "reference": "Services/Documents.qml:527",
     "comment": "file chooser title"
   },
   {
     "term": "Save As…",
     "context": "Save As…",
-    "reference": "Modules/MainWindow.qml:391",
-    "comment": "window menu item"
+    "reference": "Modules/ConflictBanner.qml:109, Modules/MainWindow.qml:601",
+    "comment": "banner button that saves the document under another name | window menu item"
   },
   {
     "term": "Save Changes to %1?",
     "context": "Save Changes to %1?",
-    "reference": "Modules/MainWindow.qml:204",
+    "reference": "Modules/MainWindow.qml:297",
     "comment": "dialog title; %1 is a document name"
   },
   {
     "term": "Save as",
     "context": "Save as",
-    "reference": "Modules/SettingsView.qml:27",
+    "reference": "Common/Shortcuts.qml:63",
     "comment": "shortcut description"
   },
   {
     "term": "Save as Administrator",
     "context": "Save as Administrator",
-    "reference": "Services/Documents.qml:486",
+    "reference": "Modules/ConflictBanner.qml:98, Services/Documents.qml:633",
     "comment": "button that writes a file with administrator rights"
   },
   {
     "term": "Save as UTF-8",
     "context": "Save as UTF-8",
-    "reference": "Services/Documents.qml:500",
+    "reference": "Services/Documents.qml:647",
     "comment": "button that saves in the UTF-8 encoding"
+  },
+  {
+    "term": "Save as UTF-8…",
+    "context": "Save as UTF-8…",
+    "reference": "Modules/ConflictBanner.qml:109",
+    "comment": "banner button that saves a copy of a file in UTF-8"
   },
   {
     "term": "Save files two seconds after the last edit.",
     "context": "Save files two seconds after the last edit.",
-    "reference": "Modules/SettingsView.qml:387",
+    "reference": "Modules/SettingsView.qml:381",
     "comment": "setting description"
   },
   {
     "term": "Save with Encoding",
     "context": "Save with Encoding",
-    "reference": "Modules/StatusBar.qml:365",
+    "reference": "Modules/StatusBar.qml:400",
     "comment": "status bar encoding menu section"
   },
   {
     "term": "Saved",
     "context": "Saved",
-    "reference": "Modules/StatusBar.qml:108",
+    "reference": "Modules/StatusBar.qml:111",
     "comment": "status bar save state"
   },
   {
     "term": "Saving…",
     "context": "Saving…",
-    "reference": "Modules/StatusBar.qml:103",
+    "reference": "Modules/StatusBar.qml:106",
     "comment": "status bar save state"
+  },
+  {
+    "term": "Search shortcuts",
+    "context": "Search shortcuts",
+    "reference": "Modules/Settings/ShortcutsPage.qml:41",
+    "comment": "placeholder of the shortcut search field"
   },
   {
     "term": "Select All",
     "context": "Select All",
-    "reference": "Modules/Editor/SpellMenu.qml:119",
+    "reference": "Modules/Editor/SpellMenu.qml:238",
     "comment": "edit menu action"
+  },
+  {
+    "term": "Select Line",
+    "context": "Select Line",
+    "reference": "Modules/MainWindow.qml:782, Modules/Editor/SpellMenu.qml:98",
+    "comment": "editor context menu action | window menu item"
+  },
+  {
+    "term": "Select line",
+    "context": "Select line",
+    "reference": "Common/Shortcuts.qml:229",
+    "comment": "shortcut description"
   },
   {
     "term": "Settings",
     "context": "Settings",
-    "reference": "Modules/SettingsView.qml:37, Modules/SettingsView.qml:238, Modules/MainWindow.qml:444",
+    "reference": "Modules/SettingsView.qml:159, Modules/MainWindow.qml:671, Common/Shortcuts.qml:309",
     "comment": "settings page title | shortcut description | window menu item"
+  },
+  {
+    "term": "Show Why",
+    "context": "Show Why",
+    "reference": "Modules/StatusBar.qml:278",
+    "comment": "tooltip on the status bar read-only state"
   },
   {
     "term": "Side by Side",
     "context": "Side by Side",
-    "reference": "Modules/SettingsView.qml:375",
+    "reference": "Modules/SettingsView.qml:365",
     "comment": "markdown preview mode"
   },
   {
     "term": "Simple",
     "context": "Simple",
-    "reference": "Modules/SettingsView.qml:269",
+    "reference": "Modules/SettingsView.qml:245",
     "comment": "view mode"
   },
   {
     "term": "Simple Mode",
     "context": "Simple Mode",
-    "reference": "Modules/MainWindow.qml:435",
+    "reference": "Modules/MainWindow.qml:662",
     "comment": "window menu item"
   },
   {
-    "term": "Simple hides the status details, line numbers and a lone tab.",
-    "context": "Simple hides the status details, line numbers and a lone tab.",
-    "reference": "Modules/SettingsView.qml:268",
+    "term": "Simple hides the status details, line numbers and a lone tab, and centers wrapped text.",
+    "context": "Simple hides the status details, line numbers and a lone tab, and centers wrapped text.",
+    "reference": "Modules/SettingsView.qml:244",
     "comment": "setting description"
+  },
+  {
+    "term": "Sort Lines",
+    "context": "Sort Lines",
+    "reference": "Modules/MainWindow.qml:798, Modules/Editor/SpellMenu.qml:90",
+    "comment": "editor context menu action | window menu item"
   },
   {
     "term": "Spellcheck",
     "context": "Spellcheck",
-    "reference": "Modules/SettingsView.qml:465",
-    "comment": "settings section"
+    "reference": "Modules/SettingsView.qml:53",
+    "comment": "settings category"
   },
   {
     "term": "Spellcheck Language",
     "context": "Spellcheck Language",
-    "reference": "Modules/StatusBar.qml:300",
+    "reference": "Modules/StatusBar.qml:335",
     "comment": "tooltip on the status bar spellcheck language"
   },
   {
     "term": "Start typing…",
     "context": "Start typing…",
-    "reference": "Modules/Editor/EditorPane.qml:826",
+    "reference": "Modules/Editor/EditorPane.qml:1130",
     "comment": "placeholder in an empty document"
   },
   {
     "term": "String",
     "context": "String",
-    "reference": "Modules/SettingsView.qml:87",
+    "reference": "Modules/Settings/HighlightPage.qml:54",
     "comment": "syntax role"
   },
   {
     "term": "Strong Emphasis",
     "context": "Strong Emphasis",
-    "reference": "Modules/SettingsView.qml:105",
+    "reference": "Modules/Settings/HighlightPage.qml:72",
     "comment": "syntax role"
   },
   {
     "term": "Syntax Highlighting",
     "context": "Syntax Highlighting",
-    "reference": "Modules/SettingsView.qml:424",
+    "reference": "Modules/Settings/HighlightPage.qml:89",
     "comment": "setting name"
+  },
+  {
+    "term": "Syntax highlighting and its colors",
+    "context": "Syntax highlighting and its colors",
+    "reference": "Modules/SettingsView.qml:48",
+    "comment": "settings category description"
   },
   {
     "term": "Tab Width",
     "context": "Tab Width",
-    "reference": "Modules/SettingsView.qml:353",
+    "reference": "Modules/SettingsView.qml:344",
     "comment": "setting name"
+  },
+  {
+    "term": "Tabs",
+    "context": "Tabs",
+    "reference": "Common/Shortcuts.qml:18",
+    "comment": "shortcut group"
   },
   {
     "term": "Tag",
     "context": "Tag",
-    "reference": "Modules/SettingsView.qml:79",
+    "reference": "Modules/Settings/HighlightPage.qml:46",
     "comment": "syntax role"
   },
   {
     "term": "Text",
     "context": "Text",
-    "reference": "Modules/SettingsView.qml:69",
-    "comment": "syntax role"
+    "reference": "Modules/SettingsView.qml:320, Modules/Settings/HighlightPage.qml:36",
+    "comment": "settings section | syntax role"
   },
   {
     "term": "Text copied",
     "context": "Text copied",
-    "reference": "Modules/Editor/MarkdownPreview.qml:151",
+    "reference": "Modules/Editor/MarkdownPreview.qml:155",
     "comment": "toast after copying the preview text"
   },
   {
     "term": "The Tab key inserts spaces instead of a tab.",
     "context": "The Tab key inserts spaces instead of a tab.",
-    "reference": "Modules/SettingsView.qml:366",
+    "reference": "Modules/SettingsView.qml:353",
     "comment": "setting description"
   },
   {
     "term": "The document has characters this encoding cannot hold.",
     "context": "The document has characters this encoding cannot hold.",
-    "reference": "Services/Documents.qml:497",
+    "reference": "Services/Documents.qml:644",
     "comment": "dialog message when saving fails because of the encoding"
   },
   {
     "term": "The editor component's root is not EditorPluginComponent.",
     "context": "The editor component's root is not EditorPluginComponent.",
-    "reference": "Services/PluginService.qml:169",
+    "reference": "Services/PluginService.qml:207",
     "comment": "plugin load error"
   },
   {
     "term": "The preview is not available",
     "context": "The preview is not available",
-    "reference": "Modules/Editor/MarkdownPreview.qml:75",
+    "reference": "Modules/Editor/MarkdownPreview.qml:79",
     "comment": "markdown preview, rendering failed"
+  },
+  {
+    "term": "The unsaved changes in %1 could not be stored for recovery. Quitting discards them.",
+    "context": "The unsaved changes in %1 could not be stored for recovery. Quitting discards them.",
+    "reference": "Services/Documents.qml:817",
+    "comment": "dialog message; %1 is a file name"
+  },
+  {
+    "term": "The unsaved changes in %1 could not be stored for recovery. Save the document, or free some disk space.",
+    "context": "The unsaved changes in %1 could not be stored for recovery. Save the document, or free some disk space.",
+    "reference": "Services/Documents.qml:1035",
+    "comment": "error when the crash-recovery copy of a document cannot be written; %1 is a file name"
+  },
+  {
+    "term": "The unsaved changes in %1 documents could not be stored for recovery. Quitting discards them.",
+    "context": "The unsaved changes in %1 documents could not be stored for recovery. Quitting discards them.",
+    "reference": "Services/Documents.qml:817",
+    "comment": "dialog message; %1 is a count"
   },
   {
     "term": "Theme",
     "context": "Theme",
-    "reference": "Modules/SettingsView.qml:277",
+    "reference": "Modules/SettingsView.qml:256",
     "comment": "setting name"
   },
   {
     "term": "This document is too large to preview",
     "context": "This document is too large to preview",
-    "reference": "Modules/Editor/MarkdownPreview.qml:69",
+    "reference": "Modules/Editor/MarkdownPreview.qml:73",
     "comment": "markdown preview"
   },
   {
     "term": "This file changed on disk.",
     "context": "This file changed on disk.",
-    "reference": "Modules/ConflictBanner.qml:41",
+    "reference": "Modules/ConflictBanner.qml:28",
     "comment": "conflict banner message"
   },
   {
     "term": "This file was deleted from disk.",
     "context": "This file was deleted from disk.",
-    "reference": "Modules/ConflictBanner.qml:41",
+    "reference": "Modules/ConflictBanner.qml:26",
     "comment": "conflict banner message"
+  },
+  {
+    "term": "This file was not valid UTF-8 and was read as ISO-8859-1. Saving as UTF-8 rewrites every accented character as it is shown now.",
+    "context": "This file was not valid UTF-8 and was read as ISO-8859-1. Saving as UTF-8 rewrites every accented character as it is shown now.",
+    "reference": "Services/Documents.qml:644",
+    "comment": "warning added to a dialog when the encoding of a file was guessed"
+  },
+  {
+    "term": "Title Case",
+    "context": "Title Case",
+    "reference": "Modules/MainWindow.qml:821, Modules/Editor/SpellMenu.qml:116",
+    "comment": "editor context menu, change case | window menu item that capitalizes each word of the selection"
+  },
+  {
+    "term": "Toggle overwrite mode",
+    "context": "Toggle overwrite mode",
+    "reference": "Common/Shortcuts.qml:187",
+    "comment": "shortcut description"
+  },
+  {
+    "term": "Toggle word wrap for this document",
+    "context": "Toggle word wrap for this document",
+    "reference": "Common/Shortcuts.qml:272",
+    "comment": "shortcut description"
   },
   {
     "term": "Type",
     "context": "Type",
-    "reference": "Modules/SettingsView.qml:73",
+    "reference": "Modules/Settings/HighlightPage.qml:40",
     "comment": "syntax role"
+  },
+  {
+    "term": "UPPER CASE",
+    "context": "UPPER CASE",
+    "reference": "Modules/Editor/SpellMenu.qml:104",
+    "comment": "editor context menu, change case"
+  },
+  {
+    "term": "UPPERCASE",
+    "context": "UPPERCASE",
+    "reference": "Modules/MainWindow.qml:807",
+    "comment": "window menu item that changes the selection to upper case"
+  },
+  {
+    "term": "Undo",
+    "context": "Undo",
+    "reference": "Modules/MainWindow.qml:551, Common/Shortcuts.qml:167, Modules/Editor/SpellMenu.qml:201",
+    "comment": "edit menu action | shortcut description | window menu item"
+  },
+  {
+    "term": "Unindent",
+    "context": "Unindent",
+    "reference": "Modules/Editor/SpellMenu.qml:74",
+    "comment": "editor context menu action"
   },
   {
     "term": "Unsaved changes",
     "context": "Unsaved changes",
-    "reference": "Modules/StatusBar.qml:105",
+    "reference": "Modules/StatusBar.qml:108",
     "comment": "status bar save state"
   },
   {
     "term": "Untitled",
     "context": "Untitled",
-    "reference": "Services/Documents.qml:108",
+    "reference": "Services/Documents.qml:142",
     "comment": "name of a new, unsaved document"
   },
   {
     "term": "Untitled %1",
     "context": "Untitled %1",
-    "reference": "Services/Documents.qml:112",
+    "reference": "Services/Documents.qml:146",
     "comment": "name of a new, unsaved document; %1 is a number"
   },
   {
     "term": "Use a color like #3366cc.",
     "context": "Use a color like #3366cc.",
-    "reference": "Modules/MainWindow.qml:76",
+    "reference": "Modules/MainWindow.qml:130",
     "comment": "error for a malformed color"
   },
   {
     "term": "Use the Theme Color",
     "context": "Use the Theme Color",
-    "reference": "Modules/SettingsView.qml:449",
+    "reference": "Modules/Settings/HighlightPage.qml:177",
     "comment": "tooltip on a button that resets a syntax color"
   },
   {
     "term": "Variable",
     "context": "Variable",
-    "reference": "Modules/SettingsView.qml:85",
+    "reference": "Modules/Settings/HighlightPage.qml:52",
     "comment": "syntax role"
   },
   {
     "term": "View",
     "context": "View",
-    "reference": "Modules/SettingsView.qml:263",
-    "comment": "settings section"
+    "reference": "Modules/SettingsView.qml:240, Common/Shortcuts.qml:34",
+    "comment": "settings section | shortcut group"
+  },
+  {
+    "term": "View mode, theme and colors",
+    "context": "View mode, theme and colors",
+    "reference": "Modules/SettingsView.qml:30",
+    "comment": "settings category description"
   },
   {
     "term": "Whole word",
     "context": "Whole word",
-    "reference": "Modules/Editor/FindBar.qml:280",
+    "reference": "Modules/Editor/FindBar.qml:305",
     "comment": "find bar toggle"
+  },
+  {
+    "term": "Word Wrap",
+    "context": "Word Wrap",
+    "reference": "Modules/MainWindow.qml:646",
+    "comment": "window menu item"
   },
   {
     "term": "Wrap Lines",
     "context": "Wrap Lines",
-    "reference": "Modules/SettingsView.qml:344",
+    "reference": "Modules/SettingsView.qml:335",
     "comment": "setting name"
+  },
+  {
+    "term": "You do not have permission to change this file.",
+    "context": "You do not have permission to change this file.",
+    "reference": "Modules/ConflictBanner.qml:30",
+    "comment": "banner message for a file the user cannot write"
   },
   {
     "term": "You do not have permission to read %1.",
     "context": "You do not have permission to read %1.",
-    "reference": "Services/Documents.qml:257",
+    "reference": "Services/Documents.qml:309",
     "comment": "dialog message; %1 is a file name"
   },
   {
     "term": "You do not have permission to save %1.",
     "context": "You do not have permission to save %1.",
-    "reference": "Services/Documents.qml:478, Services/Documents.qml:483",
+    "reference": "Services/Documents.qml:625, Services/Documents.qml:630",
     "comment": "error saving a file; %1 is a file name"
   },
   {
     "term": "Your changes will be lost if you don't save them.",
     "context": "Your changes will be lost if you don't save them.",
-    "reference": "Modules/MainWindow.qml:205",
+    "reference": "Modules/MainWindow.qml:298",
     "comment": "dialog message when closing a tab with unsaved changes"
   },
   {
-    "term": "Zoom in and out",
-    "context": "Zoom in and out",
-    "reference": "Modules/SettingsView.qml:35",
+    "term": "Zoom in",
+    "context": "Zoom in",
+    "reference": "Common/Shortcuts.qml:291",
     "comment": "shortcut description"
+  },
+  {
+    "term": "Zoom out",
+    "context": "Zoom out",
+    "reference": "Common/Shortcuts.qml:297",
+    "comment": "shortcut description"
+  },
+  {
+    "term": "lower case",
+    "context": "lower case",
+    "reference": "Modules/Editor/SpellMenu.qml:110",
+    "comment": "editor context menu, change case"
+  },
+  {
+    "term": "lowercase",
+    "context": "lowercase",
+    "reference": "Modules/MainWindow.qml:814",
+    "comment": "window menu item that changes the selection to lower case"
   }
 ]

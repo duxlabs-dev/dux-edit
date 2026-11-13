@@ -5,7 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+
+	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
 )
+
+// Serializes the read and the write of appendWord, so two adds cannot both start from the same list.
+var appendMu sync.Mutex
 
 // personalFiles are the user's word lists for lang: ours first, then enchant's and hunspell's, read only.
 func personalFiles(custom, lang string, getenv func(string) string, home string) []string {
@@ -38,13 +44,15 @@ func readWords(path string, into map[string]bool) {
 	}
 }
 
-// appendWord adds w to the word list at path unless it is there already, replacing the file atomically.
+// appendWord adds w to the word list at path unless it is there already; a symlinked list stays a symlink.
 func appendWord(path, w string) error {
+	appendMu.Lock()
+	defer appendMu.Unlock()
 	data, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		if strings.TrimSpace(line) == w {
 			return nil
 		}
@@ -53,30 +61,9 @@ func appendWord(path, w string) error {
 		data = append(data, '\n')
 	}
 	data = append(data, w+"\n"...)
-
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, ".custom_dictionary-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Chmod(0o644); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	return os.Rename(tmp.Name(), path)
+	_, err = atomicfile.Save(path, data, atomicfile.Options{Mode: 0o644})
+	return err
 }

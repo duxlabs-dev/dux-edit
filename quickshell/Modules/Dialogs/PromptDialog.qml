@@ -7,7 +7,7 @@ import qs.DCommon.Widgets
 import qs.Services
 
 // Asks one question at a time from a queue of {title, message, actions: [{label, run, danger}], cancelLabel, cancel}.
-// Enter runs the last action, Escape cancels.
+// Enter runs the last action unless it is a destructive one, Escape cancels.
 DDialog {
     id: root
 
@@ -40,7 +40,12 @@ DDialog {
         }
         Documents.current?.editor?.focusEditor();
     }
-    onAccepted: finish(promptActions[promptActions.length - 1]?.run ?? null)
+    onAccepted: {
+        const action = promptActions[promptActions.length - 1];
+        if (action?.danger)
+            return;
+        finish(action?.run ?? null);
+    }
     onRejected: finish(null)
 
     actions: [

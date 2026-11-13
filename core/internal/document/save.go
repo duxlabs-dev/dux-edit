@@ -26,6 +26,7 @@ type loaded struct {
 	identity string
 	size     int64
 	writable bool
+	missing  bool
 }
 
 func largeFailure(size int64) Failure {
@@ -45,6 +46,7 @@ func (s *Store) load(path, encoding string, elevated, force bool) (loaded, *Fail
 	info, err := os.Stat(path)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
+		ld.missing = true
 		ld.doc.Encoding = textcodec.UTF8
 		if encoding != "" {
 			ld.doc.Encoding, err = textcodec.Canonical(encoding)
@@ -187,7 +189,7 @@ func (s *Store) Save(ctx context.Context, req SaveRequest) any {
 
 	var snap saveSnapshot
 	d.mu.RLock()
-	closed := d.closed
+	closed, desynced, lossy := d.closed, d.desynced, d.lossy
 	snap.version, snap.text, snap.path = d.version, d.buf.Text(), d.path
 	snap.info, snap.identity, snap.elevated = d.info, d.identity, d.elevated
 	if d.ends != nil {
@@ -195,8 +197,11 @@ func (s *Store) Save(ctx context.Context, req SaveRequest) any {
 		snap.ends = append([]textcodec.EOL(nil), d.ends...)
 	}
 	d.mu.RUnlock()
-	if closed {
+	switch {
+	case closed:
 		return Fail(CodeUnknownDoc, "")
+	case desynced:
+		return Fail(CodeDesync, "")
 	}
 	if req.MD5 != "" && !strings.EqualFold(req.MD5, plainTextMD5(snap.text)) {
 		return Fail(CodeDesync, "")
@@ -221,8 +226,11 @@ func (s *Store) Save(ctx context.Context, req SaveRequest) any {
 	}
 
 	info, ends, fail := convert(snap.info, snap.ends, req)
-	if fail != nil {
+	switch {
+	case fail != nil:
 		return *fail
+	case lossy && info.Encoding == snap.info.Encoding:
+		return Failure{Code: CodeUnencodable, Encoding: info.Encoding}
 	}
 	data, err := encode(snap, info, ends)
 	var unencodable *textcodec.UnencodableError
@@ -254,7 +262,7 @@ func (s *Store) Save(ctx context.Context, req SaveRequest) any {
 	d.mu.Lock()
 	d.path = target
 	d.title = filepath.Base(target)
-	d.info, d.identity, d.reported = info, identity, identity
+	d.info, d.identity, d.reported, d.lossy = info, identity, identity, false
 	if req.EOL != "" {
 		d.ends = nil
 	}
@@ -355,7 +363,9 @@ func (s *Store) writeDirect(target string, data []byte, loaded string, saveAs bo
 	if !saveAs && !req.Force && err == nil && current != loaded {
 		return "", &Failure{Code: CodeConflict}
 	}
-	identity, err := atomicfile.Save(target, data, atomicfile.Options{})
+	// A file that can only be written in place is copied to the swap dir first, so a failed write can be undone.
+	backup, _ := s.swaps()
+	identity, err := atomicfile.Save(target, data, atomicfile.Options{BackupDir: string(backup)})
 	switch {
 	case errors.Is(err, os.ErrPermission):
 		return "", s.accessFailure(err)
@@ -415,7 +425,7 @@ func (s *Store) Reload(docID, encoding string) any {
 	defer d.saveMu.Unlock()
 
 	d.mu.RLock()
-	path, elevated, closed := d.path, d.readElevated, d.closed
+	path, elevated, closed, existed := d.path, d.readElevated, d.closed, d.identity != ""
 	d.mu.RUnlock()
 	switch {
 	case closed:
@@ -424,8 +434,12 @@ func (s *Store) Reload(docID, encoding string) any {
 		return Fail(CodeNotFound, "")
 	}
 	ld, fail := s.load(path, encoding, elevated, true)
-	if fail != nil {
+	switch {
+	case fail != nil:
 		return *fail
+	case ld.missing && existed:
+		// The file is gone: the mirror may be the last copy of its text, so it is not replaced by nothing.
+		return Fail(CodeNotFound, "")
 	}
 
 	d.mu.Lock()
@@ -435,7 +449,7 @@ func (s *Store) Reload(docID, encoding string) any {
 	d.desynced = false
 	d.stopGapLocked()
 	d.bumpLocked()
-	d.info, d.ends = ld.doc.Info, ld.doc.Ends
+	d.info, d.ends, d.lossy = ld.doc.Info, ld.doc.Ends, ld.doc.Lossy
 	d.identity, d.reported, d.writable = ld.identity, ld.identity, ld.writable
 	d.dirty, d.swapStale = false, false
 	result := OpenResult{
@@ -452,6 +466,9 @@ func (s *Store) Reload(docID, encoding string) any {
 		Writable: ld.writable,
 		Elevated: d.elevated,
 		Size:     ld.size,
+		ReadOnly: ld.doc.Lossy,
+
+		EncodingGuessed: ld.doc.Fallback,
 
 		Recoverable: !d.readElevated,
 	}
@@ -469,5 +486,6 @@ func (s *Store) Reload(docID, encoding string) any {
 	if drain {
 		s.drain(d)
 	}
+	result.setIndent(path, result.Text)
 	return result
 }

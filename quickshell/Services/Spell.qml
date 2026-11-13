@@ -26,22 +26,13 @@ Singleton {
     readonly property bool active: enabled && available
 
     // docId -> LineMap of flat [col, len, ...] arrays.
-    readonly property var stores: ({})
+    readonly property var stores: LineIndex.createStores(2)
 
     signal rangesChanged(string docId)
 
-    function store(docId) {
-        let map = stores[docId];
-        if (!map) {
-            map = LineIndex.createMap();
-            stores[docId] = map;
-        }
-        return map;
-    }
-
     // A LineMap: get(line) returns [col, len, ...] or undefined.
     function ranges(docId) {
-        return stores[docId] ?? null;
+        return stores.get(docId);
     }
 
     function configure() {
@@ -68,7 +59,7 @@ Singleton {
     function view(doc, first, last, cursorLine, cursorColumn) {
         if (!active)
             return;
-        store(doc.docId).keep(first, last);
+        stores.open(doc.docId).keep(first, last);
         Backend.notify("spell.view", {
             "docId": doc.docId,
             "first": first,
@@ -96,15 +87,12 @@ Singleton {
         }, null);
     }
 
-    function linesEdited(docId, startLine, oldLines, newLines, version) {
-        const map = stores[docId];
-        if (!map)
-            return;
-        map.edit(version ?? Documents.byDocId(docId)?.version ?? 0, startLine, oldLines, newLines);
+    function linesEdited(docId, version, change) {
+        stores.edited(docId, version, change);
     }
 
     function forget(docId) {
-        delete stores[docId];
+        stores.forget(docId);
     }
 
     onConnectedChanged: configure()
@@ -114,15 +102,14 @@ Singleton {
     onActiveChanged: {
         if (active)
             return;
-        for (const docId in stores)
-            stores[docId].clear();
+        stores.clear();
     }
 
     Component.onCompleted: {
         Backend.subscribe("spell", event => {
             if (event.type !== "ranges" || !event.lines || !Documents.byDocId(event.docId))
                 return;
-            root.store(event.docId).merge(event.version, event.first, event.lines);
+            root.stores.open(event.docId).merge(event.version, event.first, event.lines);
             root.rangesChanged(event.docId);
         });
     }

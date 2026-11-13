@@ -13,7 +13,6 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	east "github.com/yuin/goldmark/extension/ast"
-	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/util"
@@ -47,7 +46,6 @@ func Render(source string, opt Options) (string, error) {
 	r := &qtRenderer{opt: opt, lineStarts: lineStarts(src)}
 	md := goldmark.New(
 		goldmark.WithExtensions(extension.GFM),
-		goldmark.WithParserOptions(parser.WithAutoHeadingID()),
 		goldmark.WithRendererOptions(
 			html.WithHardWraps(),
 			renderer.WithNodeRenderers(util.Prioritized(r, 1)),

@@ -3,6 +3,7 @@ package backend
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/duxlabs-dev/dux-edit/core/internal/markdown"
 	"github.com/duxlabs-dev/dux-edit/core/internal/search"
@@ -30,14 +31,50 @@ func searchFailure(err error) any {
 	return fail("EIO", err.Error())
 }
 
+// latestFinds holds the newest search.find seq per document while its finds run. The UI numbers its finds
+// because requests on one connection start in any order.
+var latestFinds = findSeqs{latest: map[string]int{}}
+
+type findSeqs struct {
+	mu     sync.Mutex
+	latest map[string]int
+}
+
+func (f *findSeqs) begin(docID string, seq int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.latest[docID] = max(f.latest[docID], seq)
+}
+
+func (f *findSeqs) superseded(docID string, seq int) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.latest[docID] > seq
+}
+
+func (f *findSeqs) end(docID string, seq int) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.latest[docID] == seq {
+		delete(f.latest, docID)
+	}
+}
+
 func (b *Backend) searchFind(ctx context.Context, p map[string]any) any {
-	return b.withText(ctx, p, func(text string, _ int64) any {
+	find := func(text string, _ int64) any {
 		matches, err := search.Find(text, query(p))
 		if err != nil {
 			return searchFailure(err)
 		}
 		return matches
-	})
+	}
+	docID, seq := params.StringOpt(p, "docId", ""), params.IntOpt(p, "seq", 0)
+	if seq <= 0 {
+		return b.withText(ctx, p, find)
+	}
+	latestFinds.begin(docID, seq)
+	defer latestFinds.end(docID, seq)
+	return b.withTextUnless(ctx, p, func() bool { return latestFinds.superseded(docID, seq) }, find)
 }
 
 func (b *Backend) searchReplaceAll(ctx context.Context, p map[string]any) any {

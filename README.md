@@ -1,6 +1,15 @@
 # Dux Edit
 
-A text and document editor for the Dux Labs desktop. It opens any text file without a project around it: notes, config files, scripts, Markdown. It sits between a scratchpad and an IDE, and takes over from the DMS notepad.
+<div align="center">
+  <img src="assets/dev.duxlabs.edit.svg" alt="Dux Edit" width="160">
+
+### A text and document editor for the dux desktop
+
+Built with [Quickshell](https://quickshell.org/) and [Go](https://go.dev/)
+
+</div>
+
+Dux Edit opens any text file without a project around it: notes, config files, scripts, Markdown. It sits between a scratchpad and an IDE, and takes over from the DMS notepad.
 
 - Tabs, drafts that survive a restart, and crash recovery
 - Syntax highlighting with [Chroma](https://github.com/alecthomas/chroma), colored from the desktop theme

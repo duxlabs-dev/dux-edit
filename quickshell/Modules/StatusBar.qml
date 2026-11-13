@@ -19,6 +19,9 @@ Rectangle {
     readonly property bool hasDoc: doc !== null
     readonly property bool fileBacked: hasDoc && !doc.isDraft
     readonly property bool largeTier: hasDoc && doc.tier === "off" && ["size", "lines", "longLine"].includes(doc.tierReason)
+    readonly property var pane: doc?.editor ?? null
+    readonly property bool overwrite: pane?.overwrite === true
+    readonly property bool readOnly: fileBacked && doc.loaded && (doc.readOnly || (!doc.writable && !doc.elevated))
 
     // Names as core/internal/textcodec.Canonical reports them.
     readonly property var encodings: [
@@ -139,6 +142,10 @@ Rectangle {
         property alias tooltipText: layer.tooltipText
         property color contentColor: Style.onSurfaceVariant
 
+        function showTooltip() {
+            layer.showTooltip();
+        }
+
         anchors.verticalCenter: parent?.verticalCenter
         implicitWidth: chipText.implicitWidth + Style.spacingS * 2
         implicitHeight: Style.buttonHeightXXS
@@ -196,10 +203,25 @@ Rectangle {
         spacing: Style.spacingXXS
         visible: root.hasDoc
 
-        Info {
+        Chip {
             id: countsInfo
 
-            text: root.counts
+            readonly property string defaultTooltip: I18n.tr("Count Words", "tooltip on the status bar counts")
+
+            label: root.counts
+            tooltipText: defaultTooltip
+            onHoveredChanged: {
+                if (!hovered)
+                    tooltipText = defaultTooltip;
+            }
+            onClicked: {
+                const pane = root.pane;
+                if (typeof pane?.wordCount !== "function")
+                    return;
+                const words = pane.wordCount();
+                tooltipText = words === 1 ? I18n.tr("1 word", "status bar word count") : I18n.tr("%1 words", "status bar word count; %1 is a number").arg(root.formatCount(words));
+                showTooltip();
+            }
         }
 
         Chip {
@@ -249,9 +271,22 @@ Rectangle {
             onClicked: Highlight.setLexer(root.doc, root.doc.lexerOverride, true)
         }
 
+        Chip {
+            visible: root.readOnly
+            label: root.doc?.readOnly ? I18n.tr("Read-Only", "status bar state of a document that cannot be edited as it is") : I18n.tr("Not Writable", "status bar state of a file the user may not write")
+            contentColor: Style.primary
+            tooltipText: I18n.tr("Show Why", "tooltip on the status bar read-only state")
+            onClicked: root.doc.readOnlyNoticeDismissed = false
+        }
+
         Info {
             text: root.saveState
             visible: text !== ""
+        }
+
+        Info {
+            visible: root.overwrite
+            text: I18n.tr("OVR", "status bar marker for overwrite mode; keep it short")
         }
 
         Info {

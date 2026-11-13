@@ -15,6 +15,11 @@ const awaitEdits = 2 * time.Second
 // withText hands fn the text once the mirror has reached the version the request names. The copy is taken
 // under the read lock and fn runs without it, so a long scan or render never holds up edits or the lexer.
 func (b *Backend) withText(ctx context.Context, p map[string]any, fn func(text string, version int64) any) any {
+	return b.withTextUnless(ctx, p, nil, fn)
+}
+
+// withTextUnless answers SUPERSEDED instead of copying the text when superseded reports a newer request.
+func (b *Backend) withTextUnless(ctx context.Context, p map[string]any, superseded func() bool, fn func(text string, version int64) any) any {
 	d, found := b.docs.Get(params.StringOpt(p, "docId", ""))
 	if !found {
 		return fail(document.CodeUnknownDoc, "")
@@ -23,6 +28,9 @@ func (b *Backend) withText(ctx context.Context, p map[string]any, fn func(text s
 	defer cancel()
 	if d.Await(ctx, int64(params.IntOpt(p, "version", 0))) != nil {
 		return fail(document.CodeDesync, "")
+	}
+	if superseded != nil && superseded() {
+		return fail("SUPERSEDED", "")
 	}
 	var text string
 	var version int64
@@ -53,7 +61,7 @@ func (b *Backend) docEdit(_ context.Context, p map[string]any) any {
 }
 
 func (b *Backend) docReset(_ context.Context, p map[string]any) any {
-	return b.docs.Reset(params.StringOpt(p, "docId", ""), int64(params.IntOpt(p, "version", 0)), params.StringOpt(p, "text", ""))
+	return b.docs.Reset(params.StringOpt(p, "docId", ""), int64(params.IntOpt(p, "version", 0)), params.StringOpt(p, "text", ""), params.BoolOpt(p, "conflict", false))
 }
 
 func (b *Backend) docSave(ctx context.Context, p map[string]any) any {
@@ -80,8 +88,15 @@ func (b *Backend) docReload(_ context.Context, p map[string]any) any {
 	return b.docs.Reload(params.StringOpt(p, "docId", ""), params.StringOpt(p, "encoding", ""))
 }
 
-func (b *Backend) docClose(_ context.Context, p map[string]any) any {
-	return b.docs.Close(params.StringOpt(p, "docId", ""), params.BoolOpt(p, "discard", false))
+func (b *Backend) docClose(ctx context.Context, p map[string]any) any {
+	ctx, cancel := context.WithTimeout(ctx, awaitEdits)
+	defer cancel()
+	return b.docs.Close(ctx, document.CloseRequest{
+		DocID:   params.StringOpt(p, "docId", ""),
+		Discard: params.BoolOpt(p, "discard", false),
+		Version: int64(params.IntOpt(p, "version", 0)),
+		MD5:     params.StringOpt(p, "md5", ""),
+	})
 }
 
 func (b *Backend) docSetTitle(_ context.Context, p map[string]any) any {
@@ -95,7 +110,9 @@ func (b *Backend) docText(ctx context.Context, p map[string]any) any {
 }
 
 func (b *Backend) docFlush(context.Context, map[string]any) any {
-	b.docs.Flush()
+	if failed := b.docs.Flush(); len(failed) > 0 {
+		return map[string]any{"ok": false, "code": document.CodeIO, "docIds": failed}
+	}
 	return ok()
 }
 

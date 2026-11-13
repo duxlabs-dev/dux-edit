@@ -17,19 +17,14 @@ Column {
     spacing: Style.spacingS
 
     function loadValue() {
-        const settings = SettingsLookup.find(root.parent);
-        if (!settings)
-            return;
-        value = settings.loadValue(settingKey, defaultValue);
-        if (!textField.activeFocus)
+        if (SettingsLookup.load(root) && !textField.activeFocus)
             textField.text = value;
     }
 
     function commit() {
         if (textField.text === value)
             return;
-        value = textField.text;
-        SettingsLookup.find(root.parent)?.saveValue(settingKey, value);
+        SettingsLookup.save(root, textField.text);
     }
 
     Component.onCompleted: loadValue()

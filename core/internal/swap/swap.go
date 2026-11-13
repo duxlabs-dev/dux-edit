@@ -27,6 +27,8 @@ type Sidecar struct {
 	BOM      bool   `json:"bom"`
 	EOL      string `json:"eol"`
 	Identity string `json:"identity"`
+	// Ends holds one digit per line break of a file with mixed line endings; the text itself is all "\n".
+	Ends string `json:"ends,omitempty"`
 	// SavedAt is in Unix milliseconds.
 	SavedAt int64 `json:"savedAt"`
 }

@@ -1,5 +1,6 @@
 import QtQuick
 import qs.DCommon.Common
+import "SettingsLookup.js" as SettingsLookup
 
 // Root of a plugin's settings component. Setting controls placed inside it read and write the plugin's data.
 Item {
@@ -38,10 +39,7 @@ Item {
     }
 
     function reloadChildValues() {
-        for (const child of content) {
-            if (typeof child.loadValue === "function")
-                child.loadValue();
-        }
+        SettingsLookup.reload(settingsColumn);
     }
 
     onContentChanged: {

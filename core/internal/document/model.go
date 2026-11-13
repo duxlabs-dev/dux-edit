@@ -1,6 +1,9 @@
 package document
 
-import "github.com/duxlabs-dev/dux-edit/core/internal/buffer"
+import (
+	"github.com/duxlabs-dev/dux-edit/core/internal/buffer"
+	"github.com/duxlabs-dev/dux-edit/core/internal/indent"
+)
 
 // Result codes shared by every doc.* reply with ok=false.
 const (
@@ -46,28 +49,50 @@ type OpenRequest struct {
 }
 
 type OpenResult struct {
-	OK        bool   `json:"ok"`
-	DocID     string `json:"docId"`
-	SwapID    string `json:"swapId"`
-	Path      string `json:"path"`
-	Title     string `json:"title"`
-	Text      string `json:"text"`
-	Version   int64  `json:"version"`
-	Encoding  string `json:"encoding"`
-	BOM       bool   `json:"bom"`
-	EOL       string `json:"eol"`
-	MixedEOL  bool   `json:"mixedEol"`
-	ReadOnly  bool   `json:"readOnly"`
-	Writable  bool   `json:"writable"`
-	Elevated  bool   `json:"elevated"`
-	Size      int64  `json:"size"`
-	Recovered bool   `json:"recovered"`
+	OK       bool   `json:"ok"`
+	DocID    string `json:"docId"`
+	SwapID   string `json:"swapId"`
+	Path     string `json:"path"`
+	Title    string `json:"title"`
+	Text     string `json:"text"`
+	Version  int64  `json:"version"`
+	Encoding string `json:"encoding"`
+	BOM      bool   `json:"bom"`
+	EOL      string `json:"eol"`
+	MixedEOL bool   `json:"mixedEol"`
+	// ReadOnly is set when the encoding cannot write the file's own bytes back, so an edit could not be saved in it.
+	ReadOnly  bool  `json:"readOnly"`
+	Writable  bool  `json:"writable"`
+	Elevated  bool  `json:"elevated"`
+	Size      int64 `json:"size"`
+	Recovered bool  `json:"recovered"`
 	// Recoverable is false for a document read with administrator rights: it has no swap.
 	Recoverable bool `json:"recoverable"`
 	Dirty       bool `json:"dirty"`
 	Watched     bool `json:"watched"`
 	// Conflict is "modified" or "deleted" when a recovered swap was based on a file that has since changed.
-	Conflict string `json:"conflict"`
+	Conflict        string `json:"conflict"`
+	Missing         bool   `json:"missing"`
+	EncodingGuessed bool   `json:"encodingGuessed"`
+	// IndentStyle ("space" or "tab") and IndentWidth come from .editorconfig or a modeline; empty when neither says.
+	IndentStyle string `json:"indentStyle,omitempty"`
+	IndentWidth int    `json:"indentWidth,omitempty"`
+}
+
+func (r *OpenResult) setIndent(path, text string) {
+	if path == "" {
+		return
+	}
+	hints := indent.Detect(path, text)
+	r.IndentStyle, r.IndentWidth = hints.Style, hints.Width
+}
+
+type CloseRequest struct {
+	DocID   string
+	Discard bool
+	// Version and MD5 are what the UI holds; a kept document is only closed once the mirror matches them.
+	Version int64
+	MD5     string
 }
 
 type SaveRequest struct {

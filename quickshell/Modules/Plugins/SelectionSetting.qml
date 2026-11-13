@@ -18,9 +18,7 @@ Item {
     implicitHeight: dropdown.implicitHeight
 
     function loadValue() {
-        const settings = SettingsLookup.find(root.parent);
-        if (settings)
-            value = settings.loadValue(settingKey, defaultValue);
+        SettingsLookup.load(root);
     }
 
     Component.onCompleted: loadValue()
@@ -34,9 +32,6 @@ Item {
         currentValue: root.value
         options: (root.options || []).map(o => typeof o === "object" ? String(o.label) : String(o))
         optionValues: (root.options || []).map(o => typeof o === "object" ? String(o.value) : String(o))
-        onValueChanged: newValue => {
-            root.value = newValue;
-            SettingsLookup.find(root.parent)?.saveValue(root.settingKey, newValue);
-        }
+        onValueChanged: newValue => SettingsLookup.save(root, newValue)
     }
 }

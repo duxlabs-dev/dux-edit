@@ -21,13 +21,13 @@ ShellRoot {
 
     readonly property string appId: "dev.duxlabs.edit"
 
-    readonly property var ownToplevel: ToplevelManager.toplevels.values.find(toplevel => toplevel.appId === appId) ?? null
-
     function showWindow() {
         if (!windowLoader.active) {
             windowLoader.active = true;
             return;
         }
+        // Looked up on demand: a binding would wake the UI for every window change on the desktop.
+        const ownToplevel = ToplevelManager.toplevels.values.find(toplevel => toplevel.appId === appId) ?? null;
         if (!ownToplevel)
             return;
         if (ownToplevel.minimized)
@@ -39,18 +39,48 @@ ShellRoot {
     function hideWindow() {
         if (!windowLoader.active)
             return;
-        Documents.suspend();
+        if (Backend.lost && Documents.unsafeDocs().length > 0) {
+            // The editors hold the only copy now; they must outlive the window's close button.
+            ToastService.showError(I18n.tr("Dux Edit lost the connection to its core. Copy your unsaved work elsewhere before closing.", "error when the window is closed while nothing can be saved"));
+            return;
+        }
+        Documents.suspend(null);
         windowLoader.active = false;
     }
 
-    function closeWindow() {
-        if (SettingsData.closeBehavior === "background") {
+    // gone: the compositor already closed the window, so a question needs it back.
+    function closeWindow(gone) {
+        if (SettingsData.closeBehavior === "background" && !(gone && Backend.lost)) {
             hideWindow();
             return;
         }
-        Documents.confirmQuit(() => {
-            Documents.suspend();
-            Backend.quit();
+        if (gone && Documents.unsafeDocs().length > 0)
+            reviveWindow();
+        quitApp();
+    }
+
+    function quitApp() {
+        Documents.confirmQuit(() => root.quit(Backend.lost));
+    }
+
+    // A compositor close takes the surface and leaves the window object, with its editors.
+    function reviveWindow() {
+        if (!windowLoader.item)
+            return;
+        windowLoader.item.visible = false;
+        windowLoader.item.visible = true;
+    }
+
+    // Quits once every unsaved document is in its swap; otherwise the window comes back to ask first.
+    function quit(discard) {
+        Documents.suspend(failed => {
+            if (failed.length === 0 || discard) {
+                Backend.quit();
+                return;
+            }
+            reviveWindow();
+            Documents.resume();
+            Documents.confirmQuit(() => root.quit(true));
         });
     }
 
@@ -99,7 +129,8 @@ ShellRoot {
         active: Quickshell.env("DUX_EDIT_START_HIDDEN") !== "1"
 
         MainWindow {
-            onCloseRequested: root.closeWindow()
+            onCloseRequested: gone => root.closeWindow(gone)
+            onQuitRequested: root.quitApp()
         }
     }
 }

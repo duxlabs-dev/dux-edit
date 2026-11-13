@@ -11,17 +11,22 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
 
+	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
 	"github.com/duxlabs-dev/dux-edit/core/internal/helper"
 )
 
 const (
 	fakeEnv     = "DUX_EDIT_ELEVATE_FAKE_HELPER"
 	fakeExitEnv = "DUX_EDIT_ELEVATE_FAKE_EXIT"
+	// The fake helper sleeps this long before it starts, like a password prompt, or after it is done.
+	fakePromptEnv = "DUX_EDIT_ELEVATE_FAKE_PROMPT"
+	fakeStuckEnv  = "DUX_EDIT_ELEVATE_FAKE_STUCK"
 )
 
 // The test binary stands in for pkexec: "<binary> <exe> helper <op> ..." runs the operation unprivileged.
@@ -38,7 +43,13 @@ func TestMain(m *testing.M) {
 		fmt.Fprintln(os.Stderr, "bad fake invocation")
 		os.Exit(127)
 	}
+	if pause, err := time.ParseDuration(os.Getenv(fakePromptEnv)); err == nil {
+		time.Sleep(pause)
+	}
 	identity, err := helper.Run(args[2:], os.Stdin, os.Stdout)
+	if pause, err := time.ParseDuration(os.Getenv(fakeStuckEnv)); err == nil {
+		time.Sleep(pause)
+	}
 	if err != nil {
 		line, _ := json.Marshal(helper.Failure{Code: string(helper.CodeOf(err)), Error: err.Error()})
 		fmt.Fprintln(os.Stderr, string(line))
@@ -60,7 +71,7 @@ func identityOf(t *testing.T, path string) string {
 	t.Helper()
 	var st unix.Stat_t
 	require.NoError(t, unix.Stat(path, &st))
-	return helper.Identity(&st)
+	return atomicfile.StatIdentity(&st)
 }
 
 func TestPolicyCoversOnlyThisBinary(t *testing.T) {
@@ -148,4 +159,31 @@ func TestClientRoundTripsThroughTheHelper(t *testing.T) {
 
 	_, _, err = client.Read(filepath.Join(root, "missing"))
 	assert.ErrorIs(t, err, fs.ErrNotExist)
+}
+
+func TestStuckHelperIsNotWaitedOnForever(t *testing.T) {
+	waitAfterEOF = 100 * time.Millisecond
+	t.Cleanup(func() { waitAfterEOF = 30 * time.Second })
+	path := filepath.Join(t.TempDir(), "f")
+	require.NoError(t, os.WriteFile(path, []byte("old"), 0o644))
+
+	client := fakeClient(t)
+	client.env = append(client.env, fakePromptEnv+"=300ms")
+	_, err := client.Replace(path, []byte("typed slowly"), "")
+	require.NoError(t, err, "the time spent before the helper is ready is not bounded")
+
+	client = fakeClient(t)
+	client.env = append(client.env, fakeStuckEnv+"=2s")
+	done := make(chan error, 1)
+	go func() {
+		_, err := client.Replace(path, []byte("new"), "")
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		require.Error(t, err)
+		assert.Equal(t, helper.CodeIO, helper.CodeOf(err))
+	case <-time.After(time.Second):
+		t.Fatal("waited on a helper that never exits")
+	}
 }

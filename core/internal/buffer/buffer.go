@@ -73,6 +73,8 @@ func (b *Buffer) LineCount() int { return len(b.lines) }
 
 func (b *Buffer) Line(i int) string { return b.lines[i] }
 
+func (b *Buffer) Width(i int) int { return b.widths[i] }
+
 // Lines returns lines [first, last) clamped to the buffer. The slice is a copy.
 func (b *Buffer) Lines(first, last int) []string {
 	first = max(first, 0)
@@ -121,20 +123,29 @@ func (b *Buffer) Replace(start, removed int, text string) (Change, error) {
 	if err != nil {
 		return Change{}, err
 	}
-	lastLine, lastIdx, err := b.Locate(start + removed)
-	if err != nil {
-		return Change{}, err
+	lastLine, lastIdx := firstLine, firstIdx
+	if removed > 0 {
+		if lastLine, lastIdx, err = b.Locate(start + removed); err != nil {
+			return Change{}, err
+		}
 	}
 	merged := b.lines[firstLine][:firstIdx] + text + b.lines[lastLine][lastIdx:]
 	fresh := strings.Split(merged, "\n")
 	change := Change{StartLine: firstLine, OldLines: lastLine - firstLine + 1, NewLines: len(fresh)}
+	added := Len16(text)
 
 	widths := make([]int, len(fresh))
-	for i, line := range fresh {
-		widths[i] = Len16(line)
+	switch {
+	case firstLine == lastLine && len(fresh) == 1:
+		// Recounting the merged line would decode all of it on every keystroke in a long line.
+		widths[0] = b.widths[firstLine] - removed + added
+	default:
+		for i, line := range fresh {
+			widths[i] = Len16(line)
+		}
 	}
 	b.lines = slices.Replace(b.lines, firstLine, lastLine+1, fresh...)
 	b.widths = slices.Replace(b.widths, firstLine, lastLine+1, widths...)
-	b.len16 += Len16(text) - removed
+	b.len16 += added - removed
 	return change, nil
 }

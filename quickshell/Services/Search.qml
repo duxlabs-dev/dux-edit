@@ -5,7 +5,7 @@ import QtQuick
 import Quickshell
 import qs.Services
 
-// Find and replace run in the core against the document mirror. Stub with the final API (ui-editor package).
+// Find and replace run in the core against the document mirror.
 Singleton {
     id: root
 
@@ -18,9 +18,14 @@ Singleton {
         }, options || {});
     }
 
-    // callback({ok, ranges: [start, length, ...], total, capped}) or ({ok: false, code: "BADREGEX", message})
+    property int findSeq: 0
+
+    // callback({ok, ranges: [start, length, ...], total, capped}) or ({ok: false, code: "BADREGEX", message}).
+    // A newer find for the same document makes an older one answer SUPERSEDED without scanning.
     function find(doc, query, options, callback) {
-        Backend.call("search.find", params(doc, query, options), callback);
+        Backend.call("search.find", Object.assign(params(doc, query, options), {
+            "seq": ++findSeq
+        }), callback);
     }
 
     // callback({ok, start, end, text, count}): apply it to the editor as one edit.

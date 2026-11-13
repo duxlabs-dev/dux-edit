@@ -6,6 +6,7 @@ require (
 	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/clipperhouse/uax29/v2 v2.7.0
 	github.com/duxlabs-dev/dux-go v1.6.3-0.20261110155217-26b745ee0afd
+	github.com/editorconfig/editorconfig-core-go/v2 v2.6.5
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/godbus/dbus/v5 v5.2.4
 	github.com/spf13/cobra v1.10.2
@@ -36,4 +37,6 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	gopkg.in/ini.v1 v1.67.3 // indirect
 )

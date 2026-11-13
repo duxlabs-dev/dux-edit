@@ -43,13 +43,13 @@ test("applyEdit reports the replaced line range like buffer.Change", () => {
     const index = create(text);
     let change;
     [text, change] = edit(index, text, 1, 0, "X");
-    assert.deepEqual({ ...change }, { startLine: 0, oldLines: 1, newLines: 1 });
-    [text, change] = edit(index, text, 2, 6, "\nA\nB\nC");
-    assert.deepEqual({ ...change }, { startLine: 0, oldLines: 2, newLines: 4 });
+    assert.deepEqual({ ...change }, { startLine: 0, oldLines: 1, newLines: 1, column: 1, removed: 0, inserted: 1 });
+    [text, change] = edit(index, text, 6, 1, "\nA\nB\nC");
+    assert.deepEqual({ ...change }, { startLine: 1, oldLines: 1, newLines: 4, column: 1, removed: 1, inserted: 6 });
     assertMatches(index, text);
     // Removing a line break joins two lines.
     [text, change] = edit(index, text, text.indexOf("\n"), 1, "");
-    assert.deepEqual({ ...change }, { startLine: 0, oldLines: 2, newLines: 1 });
+    assert.deepEqual({ ...change }, { startLine: 0, oldLines: 2, newLines: 1, column: 4, removed: 1, inserted: 0 });
     assertMatches(index, text);
     // Emoji: surrogate pairs count as two units.
     [text, change] = edit(index, text, text.length, 0, "😀\n😀");
@@ -91,7 +91,15 @@ test("random edits agree with a rebuild", () => {
     }
 });
 
-const { createMap } = load("../Common/LineIndex.js");
+test("a paste of a million lines goes in whole", () => {
+    let text = "head\ntail";
+    const index = create(text);
+    [text] = edit(index, text, 4, 0, "\nx".repeat(1_000_000));
+    assertMatches(index, text);
+    assert.equal(index.lineText(index.count - 1), "tail");
+});
+
+const { createMap, createStores } = load("../Common/LineIndex.js");
 
 test("a line map shifts values past an edit and drops the edited lines", () => {
     const map = createMap();
@@ -137,4 +145,40 @@ test("a line map that never merges stops tracking edits and refuses values from 
     assert.equal(map.get(0), undefined);
     map.merge(2000, 0, ["fresh"]);
     assert.equal(map.get(0), "fresh");
+});
+
+test("an edit inside one line keeps the runs it did not touch", () => {
+    const stores = createStores(3);
+    stores.edited("doc", 1, { startLine: 0, oldLines: 1, newLines: 1, column: 0, removed: 0, inserted: 1 });
+    assert.equal(stores.get("doc"), null);
+    const map = stores.open("doc");
+    // "ab cd ef" with three runs: [0,2), [3,5), [6,8).
+    map.merge(0, 0, [[0, 2, 1, 3, 2, 2, 6, 2, 3], ["other"]]);
+    const lines = map.lines;
+    stores.edited("doc", 1, { startLine: 0, oldLines: 1, newLines: 1, column: 4, removed: 0, inserted: 1 });
+    assert.deepEqual([...map.get(0)], [0, 2, 1, 7, 2, 3]);
+    assert.deepEqual(map.get(1), ["other"]);
+    assert.equal(map.lines, lines);
+    stores.edited("doc", 2, { startLine: 0, oldLines: 1, newLines: 1, column: 7, removed: 0, inserted: 2 });
+    stores.edited("doc", 3, { startLine: 0, oldLines: 1, newLines: 1, column: 2, removed: 0, inserted: 1 });
+    assert.deepEqual([...map.get(0)], [0, 2, 1, 10, 2, 3]);
+    stores.edited("doc", 4, { startLine: 0, oldLines: 1, newLines: 1, column: 1, removed: 3, inserted: 0 });
+    assert.deepEqual([...map.get(0)], [7, 2, 3]);
+    map.merge(0, 0, [[0, 1, 1]]);
+    assert.deepEqual([...map.get(0)], [7, 2, 3]);
+    map.merge(4, 0, [[0, 1, 1]]);
+    assert.deepEqual([...map.get(0)], [0, 1, 1]);
+});
+
+test("a line edit that changes the line count still drops the edited lines' runs", () => {
+    const stores = createStores(2);
+    const map = stores.open("doc");
+    map.merge(0, 0, [[0, 3], [1, 2], [4, 1]]);
+    stores.edited("doc", 1, { startLine: 1, oldLines: 1, newLines: 2, column: 2, removed: 0, inserted: 1 });
+    assert.deepEqual([...map.get(0)], [0, 3]);
+    assert.equal(map.get(1), undefined);
+    assert.equal(map.get(2), undefined);
+    assert.deepEqual([...map.get(3)], [4, 1]);
+    stores.forget("doc");
+    assert.equal(stores.get("doc"), null);
 });

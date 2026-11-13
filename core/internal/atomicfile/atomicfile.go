@@ -4,6 +4,8 @@ package atomicfile
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,9 +18,15 @@ import (
 type Options struct {
 	// Mode for a file that does not exist yet; 0 means 0666 minus the umask.
 	Mode os.FileMode
+	// BackupDir holds a copy of the original bytes while a file is overwritten in place, and keeps it
+	// when the write fails and the original cannot be put back. Empty means no copy.
+	BackupDir string
 }
 
-var copiedXattrs = []string{"security.selinux", "system.posix_acl_access"}
+// KeptXattrs are the attributes a replaced file must keep: its SELinux label and its ACL.
+func KeptXattrs() []string {
+	return []string{"security.selinux", "system.posix_acl_access"}
+}
 
 // Stat returns the "dev:ino:size:mtimeNs" identity of the file path resolves to.
 func Stat(path string) (string, error) {
@@ -33,9 +41,17 @@ func Stat(path string) (string, error) {
 func Identity(info os.FileInfo) string {
 	st, ok := info.Sys().(*syscall.Stat_t)
 	if !ok {
-		return fmt.Sprintf("0:0:%d:%d", info.Size(), info.ModTime().UnixNano())
+		return identity(0, 0, info.Size(), info.ModTime().UnixNano())
 	}
-	return fmt.Sprintf("%d:%d:%d:%d", st.Dev, st.Ino, st.Size, st.Mtim.Nano())
+	return identity(st.Dev, st.Ino, st.Size, st.Mtim.Nano())
+}
+
+func StatIdentity(st *unix.Stat_t) string {
+	return identity(st.Dev, st.Ino, st.Size, st.Mtim.Nano())
+}
+
+func identity(dev, ino uint64, size, mtimeNs int64) string {
+	return fmt.Sprintf("%d:%d:%d:%d", dev, ino, size, mtimeNs)
 }
 
 // Writable reports whether the effective user may write path, or create it when it does not exist.
@@ -50,30 +66,50 @@ func Writable(path string) bool {
 // Resolve follows symlinks, including a dangling last one, so a save writes the target and keeps the link.
 func Resolve(path string) (string, error) {
 	for range 40 {
-		info, err := os.Lstat(path)
-		if errors.Is(err, os.ErrNotExist) {
-			dir, derr := filepath.EvalSymlinks(filepath.Dir(path))
-			if derr != nil {
-				return "", derr
-			}
-			return filepath.Join(dir, filepath.Base(path)), nil
-		}
+		// A relative link is read from the real directory, so its ".." is not taken from the path as written.
+		parent, base := split(path)
+		dir, err := filepath.EvalSymlinks(parent)
 		if err != nil {
 			return "", err
 		}
-		if info.Mode()&os.ModeSymlink == 0 {
+		if base == "." || base == ".." {
 			return filepath.EvalSymlinks(path)
+		}
+		path = filepath.Join(dir, base)
+		info, err := os.Lstat(path)
+		switch {
+		case errors.Is(err, os.ErrNotExist):
+			return path, nil
+		case err != nil:
+			return "", err
+		case info.Mode()&os.ModeSymlink == 0:
+			return path, nil
 		}
 		link, err := os.Readlink(path)
 		if err != nil {
 			return "", err
 		}
 		if !filepath.IsAbs(link) {
-			link = filepath.Join(filepath.Dir(path), link)
+			link = dir + string(filepath.Separator) + link
 		}
 		path = link
 	}
 	return "", unix.ELOOP
+}
+
+// split cuts the last element off without cleaning, which would resolve ".." before the links in front of it.
+func split(path string) (string, string) {
+	path = strings.TrimRight(path, "/")
+	i := strings.LastIndexByte(path, '/')
+	switch {
+	case path == "":
+		return "/", "."
+	case i < 0:
+		return ".", path
+	case i == 0:
+		return "/", path[1:]
+	}
+	return path[:i], path[i+1:]
 }
 
 // Save writes data to path and returns the new identity.
@@ -97,7 +133,7 @@ func Save(path string, data []byte, opts Options) (string, error) {
 	case info.IsDir():
 		return "", unix.EISDIR
 	case inPlace(target, info):
-		if err := overwrite(target, data); err != nil {
+		if err := overwrite(target, info, data, opts.BackupDir); err != nil {
 			return "", err
 		}
 	default:
@@ -122,22 +158,31 @@ func inPlace(target string, info os.FileInfo) bool {
 	return !dirWritable && fileWritable
 }
 
-// The blocks are reserved and written before the old tail is cut, so a full disk fails with the file intact.
-func overwrite(target string, data []byte) error {
-	f, err := os.OpenFile(target, os.O_WRONLY, 0)
+func overwrite(target string, info os.FileInfo, data []byte, backupDir string) error {
+	// Reading a FIFO or a device to back it up could block or never end.
+	backingUp := backupDir != "" && info.Mode().IsRegular()
+	flag := os.O_WRONLY
+	if backingUp {
+		flag = os.O_RDWR
+	}
+	f, err := os.OpenFile(target, flag, 0)
 	if err != nil {
 		return err
 	}
-	err = reserve(f, int64(len(data)))
-	if err == nil {
-		_, err = f.WriteAt(data, 0)
+	var backup *os.File
+	if backingUp {
+		if backup, err = copyAside(f, backupDir); err != nil {
+			f.Close()
+			return err
+		}
 	}
-	// A device or FIFO has no length to set.
-	if info, statErr := f.Stat(); err == nil && statErr == nil && info.Mode().IsRegular() {
-		err = f.Truncate(int64(len(data)))
-	}
-	if err == nil {
-		err = f.Sync()
+	err = writeInPlace(f, data)
+	switch {
+	case backup == nil:
+	case err == nil:
+		dropBackup(backup)
+	default:
+		err = restore(f, backup, err)
 	}
 	if closeErr := f.Close(); err == nil {
 		err = closeErr
@@ -145,21 +190,102 @@ func overwrite(target string, data []byte) error {
 	return err
 }
 
-// Filesystems without fallocate fall back to the plain write.
+// WriteInPlace overwrites f with data and syncs it. The blocks are reserved and written before the old
+// tail is cut, so a full disk fails with the file intact where the filesystem can reserve.
+func WriteInPlace(f *os.File, data []byte) error {
+	return writeInPlace(f, data)
+}
+
+func writeInPlace(f *os.File, data []byte) error {
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	regular := info.Mode().IsRegular()
+	if regular {
+		if err := reserve(f, int64(len(data))); err != nil {
+			return err
+		}
+	}
+	if _, err := f.WriteAt(data, 0); err != nil {
+		return err
+	}
+	if regular {
+		if err := f.Truncate(int64(len(data))); err != nil {
+			return err
+		}
+	}
+	return f.Sync()
+}
+
+// Tests replace it to act like a filesystem that cannot reserve.
+var fallocate = unix.Fallocate
+
 func reserve(f *os.File, size int64) error {
 	if size == 0 {
 		return nil
 	}
 	for {
-		err := unix.Fallocate(int(f.Fd()), unix.FALLOC_FL_KEEP_SIZE, 0, size)
+		err := fallocate(int(f.Fd()), unix.FALLOC_FL_KEEP_SIZE, 0, size)
 		switch {
+		case err == nil:
+			return nil
 		case errors.Is(err, unix.EINTR):
 			continue
-		case errors.Is(err, unix.ENOSPC), errors.Is(err, unix.EDQUOT), errors.Is(err, unix.EFBIG):
-			return &os.PathError{Op: "fallocate", Path: f.Name(), Err: err}
+		// NFSv3, FUSE and older tmpfs cannot reserve; the write goes ahead and only the backup covers a full disk.
+		case errors.Is(err, unix.EOPNOTSUPP), errors.Is(err, unix.ENOSYS):
+			return nil
 		}
-		return nil
+		return &os.PathError{Op: "fallocate", Path: f.Name(), Err: err}
 	}
+}
+
+func copyAside(f *os.File, dir string) (*os.File, error) {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return nil, err
+	}
+	backup, err := os.CreateTemp(dir, ".inplace-*.orig")
+	if err != nil {
+		return nil, err
+	}
+	_, err = io.Copy(backup, f)
+	if err == nil {
+		err = backup.Sync()
+	}
+	if err != nil {
+		dropBackup(backup)
+		return nil, err
+	}
+	return backup, nil
+}
+
+func restore(f, backup *os.File, cause error) error {
+	err := copyBack(f, backup)
+	if err != nil {
+		backup.Close()
+		return fmt.Errorf("%w (the original is kept in %s)", cause, backup.Name())
+	}
+	dropBackup(backup)
+	return cause
+}
+
+func copyBack(f, backup *os.File) error {
+	info, err := backup.Stat()
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(io.NewOffsetWriter(f, 0), io.NewSectionReader(backup, 0, info.Size())); err != nil {
+		return err
+	}
+	if err := f.Truncate(info.Size()); err != nil {
+		return err
+	}
+	return f.Sync()
+}
+
+func dropBackup(backup *os.File) {
+	backup.Close()
+	os.Remove(backup.Name())
 }
 
 func replace(target string, data []byte, mode os.FileMode, original os.FileInfo) error {
@@ -182,7 +308,10 @@ func replace(target string, data []byte, mode os.FileMode, original os.FileInfo)
 		os.Remove(name)
 		return err
 	}
-	syncDir(dir)
+	// The new file is in place by now; this error means the rename may not survive a crash.
+	if err := syncDir(dir); err != nil {
+		return fmt.Errorf("sync %s: %w", dir, err)
+	}
 	return nil
 }
 
@@ -208,28 +337,58 @@ func fill(tmp *os.File, data []byte, mode os.FileMode, target string, original o
 
 // Best effort: a filesystem without labels or ACLs, or a label we may not set, must not fail the save.
 func copyXattrs(target string, tmp *os.File) {
-	for _, name := range copiedXattrs {
+	for _, name := range xattrNames(target) {
 		size, err := unix.Lgetxattr(target, name, nil)
-		if err != nil || size <= 0 {
-			continue
-		}
-		buf := make([]byte, size)
-		size, err = unix.Lgetxattr(target, name, buf)
 		if err != nil {
 			continue
+		}
+		// An empty value is still an attribute: some are set only to be present.
+		buf := make([]byte, size)
+		if size > 0 {
+			if size, err = unix.Lgetxattr(target, name, buf); err != nil {
+				continue
+			}
 		}
 		_ = unix.Fsetxattr(int(tmp.Fd()), name, buf[:size], 0)
 	}
 }
 
-// Some filesystems refuse fsync on a directory; the rename has happened either way.
-func syncDir(dir string) {
-	d, err := os.Open(dir)
-	if err != nil {
-		return
+func xattrNames(target string) []string {
+	names := KeptXattrs()
+	size, err := unix.Llistxattr(target, nil)
+	if err != nil || size <= 0 {
+		return names
 	}
-	_ = d.Sync()
-	d.Close()
+	buf := make([]byte, size)
+	size, err = unix.Llistxattr(target, buf)
+	if err != nil {
+		return names
+	}
+	for name := range strings.SplitSeq(string(buf[:size]), "\x00") {
+		if strings.HasPrefix(name, "user.") {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
+var fsync = (*os.File).Sync
+
+// Some filesystems refuse fsync on a directory, and a directory we may not read cannot be opened for it.
+func syncDir(dir string) error {
+	d, err := os.Open(dir)
+	switch {
+	case errors.Is(err, fs.ErrPermission):
+		return nil
+	case err != nil:
+		return err
+	}
+	defer d.Close()
+	err = fsync(d)
+	if errors.Is(err, unix.EINVAL) || errors.Is(err, unix.ENOTSUP) {
+		return nil
+	}
+	return err
 }
 
 // Reading the umask through /proc avoids setting it, which would race with other goroutines creating files.

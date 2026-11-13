@@ -10,25 +10,17 @@ import qs.DCommon.Common as DC
 Singleton {
     id: root
 
-    // Read by DCommon through DC.Style.settings; not user settings here.
-    readonly property bool popoutElevationEnabled: true
-    readonly property bool scrollbarsEnabled: true
-    readonly property int textRenderType: DC.Style.TextRenderType.Qt
-    readonly property int textRenderQuality: DC.Style.TextRenderQuality.Default
-    readonly property bool blurBorderEnabled: false
-    readonly property real blurBorderOpacity: 0.35
+    // Read by Theme and DCommon through DC.Style.settings; Style falls back for the rest.
     readonly property real blurLayerOutlineOpacity: 0
-    readonly property string blurBorderColor: "outline"
-    readonly property string blurBorderCustomColor: "#ffffff"
     readonly property bool reduceMotion: false
     readonly property int springBounce: 1
-    readonly property bool enableRippleEffects: true
 
     property alias viewMode: adapter.viewMode
     property alias useMonospace: adapter.useMonospace
     property alias fontFamily: adapter.fontFamily
     property alias fontSize: adapter.fontSize
     property alias showLineNumbers: adapter.showLineNumbers
+    property alias highlightCurrentLine: adapter.highlightCurrentLine
     property alias wrapMode: adapter.wrapMode
     property alias tabWidth: adapter.tabWidth
     property alias insertSpaces: adapter.insertSpaces
@@ -68,6 +60,16 @@ Singleton {
         fontSize = Math.max(minFontSize, Math.min(maxFontSize, size));
     }
 
+    // An empty color goes back to the theme's.
+    function setSyntaxColor(role: string, color: string): void {
+        const next = Object.assign({}, syntaxColors);
+        if (color === "")
+            delete next[role];
+        else
+            next[role] = color;
+        syntaxColors = next;
+    }
+
     function flush(): void {
         store.flush();
     }
@@ -75,7 +77,7 @@ Singleton {
     Component.onCompleted: store.read()
     Component.onDestruction: flush()
 
-    JsonStore {
+    DC.JsonStore {
         id: store
 
         name: "settings"
@@ -91,6 +93,7 @@ Singleton {
             property string fontFamily: ""
             property int fontSize: 14
             property bool showLineNumbers: true
+            property bool highlightCurrentLine: true
             // "auto" wraps prose and Markdown and leaves code unwrapped; "on" | "off"
             property string wrapMode: "auto"
             property int tabWidth: 4

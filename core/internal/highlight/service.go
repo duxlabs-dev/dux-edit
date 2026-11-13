@@ -33,15 +33,24 @@ const (
 
 const (
 	// Lexers that cannot resume are re-lexed whole on every change, so the cap is what one parse may cost
-	// per keystroke: about 20 ms of the worker for Markdown at this size.
+	// per keystroke. Markdown re-parses only the blocks around an edit, but one that reaches past them
+	// costs a whole parse.
 	wholeMaxBytes    = 64 << 10
 	markdownMaxBytes = 64 << 10
+	// A save re-lexes the whole document to catch lookahead the checkpoints miss. Past this size that costs
+	// seconds per autosave, so a larger file keeps the gap until reopened.
+	saveRelexBytes = 256 << 10
 	// restartBack lines of context before an edit cover lookahead that reaches into the next lines.
 	restartBack = 8
 	// windowMargin lines past the target are lexed but not kept; chroma sees what follows the target.
 	windowMargin = 512
 	firstChunk   = 512
 	maxChunk     = 16384
+	// A view more than specGap lines below the lexed prefix is first lexed alone, starting specBack lines
+	// above it, and shown until the exact lex arrives.
+	specGap  = 1024
+	specBack = 128
+	specMax  = 1024
 )
 
 var ErrUnknownDocument = errors.New("unknown document")
@@ -109,6 +118,20 @@ type lineState struct {
 
 var editedLine = lineState{ck: noCheckpoint, dirty: true}
 
+type specLines struct {
+	first, last int
+	spans       [][]span
+}
+
+func (sp specLines) covers(first, last int) bool { return sp.first <= first && last <= sp.last }
+
+func (sp specLines) line(i int) ([]span, bool) {
+	if i < sp.first || i-sp.first >= len(sp.spans) {
+		return nil, false
+	}
+	return sp.spans[i-sp.first], true
+}
+
 type linesReply struct {
 	lines   []Line
 	version int64
@@ -142,26 +165,37 @@ type docState struct {
 	source    string
 	kind      engine
 	il        *incLexer
+	md        *mdDoc
+	spec      specLines
 	failed    bool
 	state     State
 	lines     []lineState
 	lexedTo   int
 	pending   int
 	full      bool
+	fullFrom  int
 	viewFirst int
 	viewLast  int
 	viewDirty bool
 	waiters   []*waiter
 }
 
+type event struct {
+	topic string
+	data  any
+}
+
 type Service struct {
 	publish document.Publisher
+	// pubMu keeps events in order when the worker and a handler flush at once.
+	pubMu sync.Mutex
 
 	mu      sync.Mutex
 	docs    map[string]*docState
 	focus   string
 	closed  bool
 	signals atomic.Int64
+	outbox  []event
 
 	wake  chan struct{}
 	stop  chan struct{}
@@ -227,7 +261,8 @@ func (s *Service) changed(id string, ch buffer.Change) {
 	ds.version++
 	ds.blocked = false
 	// A save backstop is moot once the text moves on, and retrying it per keystroke would keep a core busy.
-	ds.full = false
+	ds.full, ds.fullFrom = false, 0
+	ds.spec = specLines{}
 	ds.applyChange(ch)
 	s.mu.Unlock()
 	s.signal()
@@ -246,7 +281,8 @@ func (s *Service) reset(id string) {
 func (s *Service) saved(id string) {
 	s.mu.Lock()
 	if ds := s.docs[id]; ds != nil {
-		ds.redetect, ds.full = true, true
+		ds.redetect = true
+		ds.full = ds.full || ds.bytes+int64(len(ds.meta)) <= saveRelexBytes
 	}
 	s.mu.Unlock()
 	s.signal()
@@ -277,6 +313,7 @@ func (s *Service) View(docID string, first, last int) {
 func (s *Service) SetLexer(docID, lexer string, force bool) State {
 	s.mu.Lock()
 	defer s.signal()
+	defer s.flush()
 	defer s.mu.Unlock()
 	ds := s.docs[docID]
 	if ds == nil {
@@ -292,6 +329,7 @@ func (s *Service) SetLexer(docID, lexer string, force bool) State {
 
 func (s *Service) State(docID string) State {
 	s.mu.Lock()
+	defer s.flush()
 	defer s.mu.Unlock()
 	ds := s.docs[docID]
 	if ds == nil {
@@ -426,9 +464,24 @@ func (ds *docState) target() int {
 
 func (s *Service) work(ds *docState) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if !s.settle(ds) {
+	if !s.workLocked(ds) {
+		s.mu.Unlock()
+		s.flush()
 		return
+	}
+	gen := ds.gen.Load()
+	s.mu.Unlock()
+	s.flush()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if ds.gen.Load() == gen {
+		s.answer(ds)
+	}
+}
+
+func (s *Service) workLocked(ds *docState) bool {
+	if !s.settle(ds) {
+		return false
 	}
 	if ds.state.Tier == TierExact {
 		ok := true
@@ -439,11 +492,26 @@ func (s *Service) work(ds *docState) {
 			ok = s.workWhole(ds)
 		}
 		if !ok {
-			return
+			return false
 		}
 	}
 	s.publishView(ds)
-	s.answer(ds)
+	return true
+}
+
+func (s *Service) emit(topic string, data any) { s.outbox = append(s.outbox, event{topic, data}) }
+
+// flush publishes the queued events without s.mu held, so a slow socket write never stalls edits or requests.
+func (s *Service) flush() {
+	s.pubMu.Lock()
+	defer s.pubMu.Unlock()
+	s.mu.Lock()
+	events := s.outbox
+	s.outbox = nil
+	s.mu.Unlock()
+	for _, e := range events {
+		s.publish(e.topic, e.data)
+	}
 }
 
 // settle brings detection, line metrics and the tier up to date and publishes a state change. It returns
@@ -515,15 +583,15 @@ func kindOf(l chroma.Lexer) engine {
 // resetLines drops lexed state; the bump stops a job that is lexing it.
 func (ds *docState) resetLines() {
 	ds.gen.Add(1)
-	ds.lines, ds.lexedTo, ds.pending = nil, 0, 0
+	ds.lines, ds.lexedTo, ds.pending, ds.fullFrom = nil, 0, 0, 0
+	ds.md, ds.spec = nil, specLines{}
 }
 
 // measure fills the metrics of lines changed since the last call.
 func (ds *docState) measure(b *buffer.Buffer) {
 	for i := ds.unknownLo; i < min(ds.unknownHi, len(ds.meta)); i++ {
 		ds.forget(ds.meta[i])
-		line := b.Line(i)
-		m := lineMeta{bytes: int32(len(line)), long: len(line) > MaxLineLen && buffer.Len16(line) > MaxLineLen}
+		m := lineMeta{bytes: int32(len(b.Line(i))), long: b.Width(i) > MaxLineLen}
 		ds.meta[i] = m
 		ds.bytes += int64(m.bytes)
 		if m.long {
@@ -584,7 +652,7 @@ func (s *Service) retier(ds *docState) {
 		return
 	}
 	ds.state = st
-	s.publish(TopicEvents, stateEvent{Type: "state", State: st})
+	s.emit(TopicEvents, stateEvent{Type: "state", State: st})
 }
 
 type stateEvent struct {
@@ -718,9 +786,23 @@ func (s *Service) workIncremental(ds *docState) bool {
 		s.retier(ds)
 		return true
 	}
+	first, last, far := ds.farView()
+	switch {
+	case !far:
+		ds.spec = specLines{}
+	case !ds.spec.covers(first, last):
+		if !s.lexSpec(ds, first, last) {
+			return false
+		}
+		s.publishView(ds)
+	}
 	for chunk := firstChunk; ds.pending < ds.target(); chunk = min(chunk*2, maxChunk) {
+		signals := s.signals.Load()
 		if !s.lexRange(ds, min(ds.target(), ds.pending+chunk)) {
 			return false
+		}
+		if s.signals.Load() != signals {
+			return true
 		}
 	}
 	if !ds.full {
@@ -728,9 +810,45 @@ func (s *Service) workIncremental(ds *docState) bool {
 	}
 	ds.full = false
 	if ds.force && !ds.withinCaps() {
+		ds.fullFrom = 0
 		return true
 	}
 	return s.lexFull(ds)
+}
+
+func (ds *docState) farView() (int, int, bool) {
+	first, last := ds.viewFirst, min(ds.viewLast+1, len(ds.lines), ds.viewFirst+specMax)
+	return first, last, first < last && first-ds.pending > specGap
+}
+
+// lexSpec lexes lines [first, last) as if the lexer were in its root state. Called with s.mu held; unlocks while lexing.
+func (s *Service) lexSpec(ds *docState, first, last int) bool {
+	from := first - specBack
+	text, ok := s.snapshot(ds, from, min(len(ds.lines), last+windowMargin))
+	if !ok {
+		return false
+	}
+	gen, il := ds.gen.Load(), ds.il
+	s.mu.Unlock()
+	s.flush()
+
+	out := make([][]span, 0, last-first)
+	_ = il.lexRun(text, noCheckpoint, func(i int, spans []span, _ mark) bool {
+		if ds.gen.Load() != gen {
+			return false
+		}
+		if from+i >= first {
+			out = append(out, spans)
+		}
+		return from+i+1 < last
+	})
+
+	s.mu.Lock()
+	if ds.gen.Load() != gen || s.docs[ds.id] != ds {
+		return false
+	}
+	ds.spec = specLines{first: first, last: last, spans: out}
+	return true
 }
 
 type lexed struct {
@@ -739,7 +857,7 @@ type lexed struct {
 }
 
 // lexRange re-lexes from a verified checkpoint before ds.pending until the lexer state matches what it was
-// before the edit, or until line target-1 is done. Called with s.mu held; unlocks while lexing.
+// before the edit, until line target-1 is done, or until another request arrives. Called with s.mu held.
 func (s *Service) lexRange(ds *docState, target int) bool {
 	c, from := 0, noCheckpoint
 	for i := min(ds.pending-restartBack, ds.pending-1); i > 0; i-- {
@@ -755,8 +873,9 @@ func (s *Service) lexRange(ds *docState, target int) bool {
 	}
 	old := make([]lineState, target-c)
 	copy(old, ds.lines[c:target])
-	pending, lexedTo, gen, il := ds.pending, ds.lexedTo, ds.gen.Load(), ds.il
+	pending, lexedTo, gen, signals, il := ds.pending, ds.lexedTo, ds.gen.Load(), s.signals.Load(), ds.il
 	s.mu.Unlock()
+	s.flush()
 
 	var out []lexed
 	converged := -1
@@ -772,6 +891,9 @@ func (s *Service) lexRange(ds *docState, target int) bool {
 		out = append(out, lexed{spans: spans, ck: ck})
 		if line >= pending && line < lexedTo && !old[i].dirty && old[i].ck.ok() && old[i].ck == ck {
 			converged = line
+			return false
+		}
+		if line >= pending && s.signals.Load() != signals {
 			return false
 		}
 		return line+1 < target
@@ -814,24 +936,37 @@ func (s *Service) lexRange(ds *docState, target int) bool {
 // lexFull re-lexes the whole document from the top: the backstop for lookahead the checkpoints cannot see.
 // It yields to any other request so a large file never holds up the viewport.
 func (s *Service) lexFull(ds *docState) bool {
-	text, ok := s.snapshot(ds, 0, len(ds.lines))
+	c, from := 0, noCheckpoint
+	for i := ds.fullFrom - 1; i > 0; i-- {
+		if ds.lines[i].ck.ok() {
+			c, from = i, ds.lines[i].ck
+			break
+		}
+	}
+	text, ok := s.snapshot(ds, c, len(ds.lines))
 	if !ok {
 		return false
 	}
+	head, resumeAt := ds.lines[c].spans, ds.fullFrom
 	gen, signals, il := ds.gen.Load(), s.signals.Load(), ds.il
 	s.mu.Unlock()
+	s.flush()
 
 	out := make([]lexed, 0, len(text))
 	yielded := false
-	err := il.lexRun(text, noCheckpoint, func(i int, spans []span, m mark) bool {
+	err := il.lexRun(text, from, func(i int, spans []span, m mark) bool {
 		if ds.gen.Load() != gen {
 			return false
 		}
-		if s.signals.Load() != signals {
+		ck := toCheckpoint(text[i], m)
+		if i == 0 && from.ok() {
+			spans, ck = merge(append(clip(head, from.col16), spans...)), from
+		}
+		out = append(out, lexed{spans: spans, ck: ck})
+		if c+i >= resumeAt && s.signals.Load() != signals {
 			yielded = true
 			return false
 		}
-		out = append(out, lexed{spans: spans, ck: toCheckpoint(text[i], m)})
 		return true
 	})
 
@@ -844,16 +979,21 @@ func (s *Service) lexFull(ds *docState) bool {
 		s.retier(ds)
 		return false
 	}
-	if yielded {
-		// Another request came in; this runs again once the worker is idle.
-		ds.full = true
-		return true
+	end := c + len(out)
+	switch {
+	case end == len(ds.lines):
+		ds.store(c, out)
+		ds.pending, ds.lexedTo, ds.fullFrom = end, end, 0
+	case yielded:
+		ds.store(c, out)
+		if end < ds.lexedTo {
+			ds.lines[end].seam = true
+		}
+		ds.pending, ds.lexedTo = max(ds.pending, end), max(ds.lexedTo, end)
+		ds.full, ds.fullFrom = true, end
+	default:
+		ds.fullFrom = 0
 	}
-	if len(out) != len(text) {
-		return true
-	}
-	ds.store(0, out)
-	ds.pending, ds.lexedTo = len(ds.lines), len(ds.lines)
 	return true
 }
 
@@ -872,13 +1012,17 @@ func (s *Service) workWhole(ds *docState) bool {
 	if !ok {
 		return false
 	}
-	gen, kind, lexer := ds.gen.Load(), ds.kind, ds.lexer
+	if ds.kind == engMarkdown && ds.md == nil {
+		ds.md = &mdDoc{}
+	}
+	gen, kind, lexer, md := ds.gen.Load(), ds.kind, ds.lexer, ds.md
 	s.mu.Unlock()
+	s.flush()
 
 	var out [][]span
 	var err error
 	if kind == engMarkdown {
-		out = markdownSpans(text)
+		out = md.update(text)
 	} else {
 		out, err = lexWhole(lexer, text)
 	}
@@ -923,23 +1067,33 @@ func lexWhole(lexer chroma.Lexer, lines []string) (out [][]span, err error) {
 	return out, nil
 }
 
-// publishView sends the lexed lines of the view whose spans changed since they were last sent.
+// publishView sends the view lines whose spans changed since they were last sent.
 func (s *Service) publishView(ds *docState) {
 	ds.viewDirty = false
 	if ds.state.Tier != TierExact {
 		return
 	}
-	last := min(ds.viewLast, ds.pending-1)
+	if ds.pending >= ds.spec.last {
+		ds.spec = specLines{}
+	}
 	first := -1
 	var batch [][]int
 	flush := func() {
 		if len(batch) > 0 {
-			s.publish(TopicEvents, map[string]any{"type": "spans", "docId": ds.id, "version": ds.version, "first": first, "lines": batch})
+			s.emit(TopicEvents, map[string]any{"type": "spans", "docId": ds.id, "version": ds.version, "first": first, "lines": batch})
 		}
 		batch = nil
 	}
-	for i := ds.viewFirst; i <= last; i++ {
-		enc := encode(ds.lines[i].spans)
+	for i := ds.viewFirst; i <= min(ds.viewLast, len(ds.lines)-1); i++ {
+		spans, ok := ds.lines[i].spans, i < ds.pending
+		if !ok {
+			spans, ok = ds.spec.line(i)
+		}
+		if !ok {
+			flush()
+			continue
+		}
+		enc := encode(spans)
 		h := sentHash(enc)
 		if h == ds.lines[i].sent {
 			flush()

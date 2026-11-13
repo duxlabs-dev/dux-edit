@@ -25,6 +25,8 @@ Item {
     readonly property string codeBackground: SyntaxPalette.toHex(Style.chipSurface)
     readonly property string linkColor: SyntaxPalette.toHex(Style.primary)
     readonly property string directory: root.doc.path.substring(0, root.doc.path.lastIndexOf("/"))
+    // Each render lays the whole preview out on the UI thread, so larger documents wait longer.
+    readonly property int renderDelay: EditorMetrics.previewDelay * Math.max(1, Math.min(8, Math.ceil(root.doc.charCount / 16384)))
 
     function documentEdited() {
         stale = true;
@@ -59,7 +61,9 @@ Item {
 
     function apply(result) {
         if (result.ok === true) {
-            html = result.html;
+            // An unchanged render skips the rich-text parse and layout.
+            if (html !== result.html)
+                html = result.html;
             message = "";
             return;
         }
@@ -131,7 +135,7 @@ Item {
 
     Timer {
         id: renderTimer
-        interval: EditorMetrics.previewDelay
+        interval: root.renderDelay
         onTriggered: root.render()
     }
 

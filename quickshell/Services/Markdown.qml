@@ -5,7 +5,6 @@ import QtQuick
 import Quickshell
 import qs.Services
 
-// Markdown preview rendering. Stub with the final API (ui-editor package).
 Singleton {
     id: root
 

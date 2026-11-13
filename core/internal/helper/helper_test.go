@@ -3,13 +3,17 @@ package helper
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
+
+	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
 )
 
 func runOp(t *testing.T, stdin []byte, args ...string) (string, error) {
@@ -36,7 +40,7 @@ func identityOf(t *testing.T, path string) string {
 	t.Helper()
 	var st unix.Stat_t
 	require.NoError(t, unix.Stat(path, &st))
-	return Identity(&st)
+	return atomicfile.StatIdentity(&st)
 }
 
 func readFile(t *testing.T, path string) string {
@@ -206,4 +210,54 @@ func TestMainRefusesOutsidePkexec(t *testing.T) {
 	stderr.Reset()
 	assert.Equal(t, ExitRefused, Main([]string{OpRead, "/etc/hostname"}, nil, nil, &stderr))
 	assert.Contains(t, stderr.String(), "root")
+}
+
+func TestWriteAndReplaceAnnounceReadyOnlyOnceTheFileChecksOut(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "f")
+	out, err := runOp(t, committed("x"), OpWrite, path)
+	require.NoError(t, err)
+	assert.Equal(t, Ready+"\n", out)
+
+	out, err = runOp(t, committed("x"), OpWrite, path)
+	require.Error(t, err)
+	assert.Empty(t, out, "nothing is announced when the create fails")
+
+	stale := identityOf(t, path)
+	require.NoError(t, os.WriteFile(path, []byte("changed"), 0o644))
+	out, err = runOp(t, committed("y"), OpReplace, path, stale)
+	require.ErrorIs(t, err, ErrConflict)
+	assert.Empty(t, out)
+
+	out, err = runOp(t, committed("y"), OpReplace, path, identityOf(t, path))
+	require.NoError(t, err)
+	assert.Equal(t, Ready+"\n", out)
+}
+
+// RLIMIT_FSIZE stands in for a full disk: the reservation fails before a byte of the file changes.
+func TestInPlaceReplaceKeepsTheFileWhenSpaceRunsOut(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "f")
+	original := strings.Repeat("o", 64)
+	require.NoError(t, os.WriteFile(path, []byte(original), 0o644))
+	require.NoError(t, os.Link(path, filepath.Join(root, "g")))
+	identity := identityOf(t, path)
+
+	var limit unix.Rlimit
+	require.NoError(t, unix.Getrlimit(unix.RLIMIT_FSIZE, &limit))
+	lowered := limit
+	lowered.Cur = 128
+	require.NoError(t, unix.Setrlimit(unix.RLIMIT_FSIZE, &lowered))
+	probe, err := os.Create(filepath.Join(t.TempDir(), "probe"))
+	require.NoError(t, err)
+	reserveErr := unix.Fallocate(int(probe.Fd()), unix.FALLOC_FL_KEEP_SIZE, 0, 256)
+	probe.Close()
+	_, err = runOp(t, committed(strings.Repeat("n", 256)), OpReplace, path, identity)
+	require.NoError(t, unix.Setrlimit(unix.RLIMIT_FSIZE, &limit))
+	if !errors.Is(reserveErr, unix.EFBIG) {
+		t.Skip("this filesystem does not apply the file size limit to fallocate")
+	}
+
+	require.ErrorIs(t, err, unix.EFBIG)
+	assert.Equal(t, original, readFile(t, path), "the file is never cut before the new bytes fit")
 }

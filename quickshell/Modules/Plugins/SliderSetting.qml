@@ -22,9 +22,7 @@ Column {
     spacing: Style.spacingS
 
     function loadValue() {
-        const settings = SettingsLookup.find(root.parent);
-        if (settings)
-            value = settings.loadValue(settingKey, defaultValue);
+        SettingsLookup.load(root);
     }
 
     Component.onCompleted: loadValue()
@@ -58,9 +56,6 @@ Column {
         startIcon: root.startIcon
         endIcon: root.endIcon
         unit: root.unit
-        onSliderValueChanged: newValue => {
-            root.value = newValue;
-            SettingsLookup.find(root.parent)?.saveValue(root.settingKey, newValue);
-        }
+        onSliderValueChanged: newValue => SettingsLookup.save(root, newValue)
     }
 }

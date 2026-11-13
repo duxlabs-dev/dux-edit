@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import qs.DCommon.Common as DC
 
 // session.json in the state dir: tab metadata only, never document text.
 // A second instance (DUX_EDIT_EPHEMERAL=1) neither restores nor writes it.
@@ -12,7 +13,7 @@ Singleton {
     readonly property bool ephemeral: Quickshell.env("DUX_EDIT_EPHEMERAL") === "1"
     readonly property int maxRecentFiles: 20
 
-    // [{tabId, path, swapId, title, cursor, scrollY, previewMode, lexer}]
+    // [{tabId, path, swapId, title, cursor, scrollY, previewMode, lexer, wrap, existed}]
     property var tabs: []
     property int currentIndex: 0
     property int windowWidth: 960
@@ -35,6 +36,16 @@ Singleton {
         if (path === "" || recentFiles[0] === path)
             return;
         recentFiles = [path].concat(recentFiles.filter(entry => entry !== path)).slice(0, maxRecentFiles);
+    }
+
+    function removeRecent(path: string): void {
+        if (!recentFiles.includes(path))
+            return;
+        recentFiles = recentFiles.filter(entry => entry !== path);
+    }
+
+    function clearRecent(): void {
+        recentFiles = [];
     }
 
     function flush(): void {
@@ -66,7 +77,7 @@ Singleton {
     }
     Component.onDestruction: flush()
 
-    JsonStore {
+    DC.JsonStore {
         id: store
 
         name: "session"

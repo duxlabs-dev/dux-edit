@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -15,14 +14,11 @@ import (
 	"syscall"
 
 	"golang.org/x/sys/unix"
+
+	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
 )
 
 var errSymlink = &Error{Code: CodeInvalid, Err: errors.New("path goes through a symlink")}
-
-// Identity is "dev:ino:size:mtimeNs", the form doc.save compares before it writes.
-func Identity(st *unix.Stat_t) string {
-	return fmt.Sprintf("%d:%d:%d:%d", st.Dev, st.Ino, st.Size, st.Mtim.Nano())
-}
 
 func validPath(path string) bool {
 	return filepath.IsAbs(path) && filepath.Clean(path) == path && path != "/" && !strings.ContainsRune(path, 0)
@@ -107,10 +103,10 @@ func read(path string, out io.Writer) (string, error) {
 	if _, err := io.Copy(out, file); err != nil {
 		return "", err
 	}
-	return Identity(&st), nil
+	return atomicfile.StatIdentity(&st), nil
 }
 
-func create(path string, in io.Reader) (string, error) {
+func create(path string, in io.Reader, ready io.Writer) (string, error) {
 	parent, name, err := openParent(path)
 	if err != nil {
 		return "", err
@@ -122,7 +118,10 @@ func create(path string, in io.Reader) (string, error) {
 		return "", err
 	}
 	file := os.NewFile(uintptr(fd), path)
-	err = copyFrames(file, in)
+	err = announce(ready)
+	if err == nil {
+		err = copyFrames(file, in)
+	}
 	identity, err := syncClose(file, err)
 	if err != nil {
 		_ = unix.Unlinkat(parent, name, 0)
@@ -131,7 +130,13 @@ func create(path string, in io.Reader) (string, error) {
 	return identity, syncDir(parent, path)
 }
 
-func replace(path, identity string, in io.Reader) (string, error) {
+// The caller waits for this before it streams, so the time spent in the password prompt is not bounded.
+func announce(ready io.Writer) error {
+	_, err := io.WriteString(ready, Ready+"\n")
+	return err
+}
+
+func replace(path, identity string, in io.Reader, ready io.Writer) (string, error) {
 	if identity != "" && !validIdentity(identity) {
 		return "", invalid("not an identity: " + identity)
 	}
@@ -150,8 +155,11 @@ func replace(path, identity string, in io.Reader) (string, error) {
 	}
 	defer unix.Close(handle)
 
-	if identity != "" && Identity(&st) != identity {
+	if identity != "" && atomicfile.StatIdentity(&st) != identity {
 		return "", &Error{Code: CodeConflict, Err: ErrConflict}
+	}
+	if err := announce(ready); err != nil {
+		return "", err
 	}
 	// A rename would split the hard links.
 	if st.Nlink > 1 {
@@ -198,7 +206,7 @@ func restoreAttributes(fd, original int, st *unix.Stat_t) error {
 // Best effort: a filesystem without xattrs, or a policy that refuses the label, still gets the save.
 func copyXattrs(from, to int) {
 	src := procPath(from)
-	for _, name := range []string{"security.selinux", "system.posix_acl_access"} {
+	for _, name := range atomicfile.KeptXattrs() {
 		size, err := unix.Getxattr(src, name, nil)
 		if err != nil || size <= 0 {
 			continue
@@ -212,19 +220,18 @@ func copyXattrs(from, to int) {
 	}
 }
 
-// The whole stream is read before the file is truncated, so an aborted save leaves it as it was.
+// The whole stream is read before the file is touched and the old tail is cut last, so an abort leaves it intact.
 func replaceInPlace(handle int, path string, in io.Reader) (string, error) {
 	var data bytes.Buffer
 	if err := copyFrames(&data, in); err != nil {
 		return "", err
 	}
-	fd, err := unix.Open(procPath(handle), unix.O_WRONLY|unix.O_TRUNC|unix.O_CLOEXEC|unix.O_NOCTTY, 0)
+	fd, err := unix.Open(procPath(handle), unix.O_WRONLY|unix.O_CLOEXEC|unix.O_NOCTTY, 0)
 	if err != nil {
 		return "", &os.PathError{Op: "open", Path: path, Err: err}
 	}
 	file := os.NewFile(uintptr(fd), path)
-	_, err = data.WriteTo(file)
-	return syncClose(file, err)
+	return syncClose(file, atomicfile.WriteInPlace(file, data.Bytes()))
 }
 
 // syncClose always closes the file. It returns the identity of what was written, or the first error,
@@ -244,7 +251,7 @@ func syncClose(file *os.File, writeErr error) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return Identity(&st), nil
+	return atomicfile.StatIdentity(&st), nil
 }
 
 func syncDir(parent int, path string) error {

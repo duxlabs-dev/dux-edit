@@ -39,6 +39,16 @@ Singleton {
 
     property url _selectedPath: ""
     property url _commonSelectedPath: ""
+    property bool _listed: false
+    property bool _commonListed: false
+    property var _commonPresent: ({})
+
+    // Bindings call tr() on every keystroke and a miss scans every context, so answers are memoized.
+    readonly property var _memo: ({
+            "translations": null,
+            "common": null,
+            "terms": new Map()
+        })
 
     Connections {
         target: SettingsData
@@ -49,36 +59,50 @@ Singleton {
                 root._pickCommonTranslation();
                 return;
             }
-            if (dir.status === FolderListModel.Ready)
+            if (root._listed)
                 root._pickTranslation();
-            if (commonDir.status === FolderListModel.Ready)
+            if (root._commonListed)
                 root._pickCommonTranslation();
         }
     }
 
-    // Listing only for a non-English locale: a FolderListModel keeps a directory watch while it has a folder.
+    // Listed once, only for a non-English locale: a FolderListModel keeps a directory watch while it has a
+    // folder. The folder is cleared after this handler returns, not from inside the model's own signal.
     FolderListModel {
         id: dir
-        folder: root._candidates.length > 0 ? root.translationsFolder : ""
+        folder: root._candidates.length > 0 && !root._listed ? root.translationsFolder : ""
         nameFilters: ["*.json"]
         showDirs: false
         showDotAndDotDot: false
 
-        onStatusChanged: if (status === FolderListModel.Ready) {
+        onStatusChanged: {
+            if (status !== FolderListModel.Ready || root._listed || root._candidates.length === 0)
+                return;
             root._loadPresentLocales();
             root._pickTranslation();
+            Qt.callLater(() => root._listed = true);
         }
     }
 
     FolderListModel {
         id: commonDir
-        folder: root._candidates.length > 0 ? root.commonTranslationsFolder : ""
+        folder: root._candidates.length > 0 && !root._commonListed ? root.commonTranslationsFolder : ""
         nameFilters: ["*.json"]
         showDirs: false
         showDotAndDotDot: false
 
-        onStatusChanged: if (status === FolderListModel.Ready) {
+        onStatusChanged: {
+            if (status !== FolderListModel.Ready || root._commonListed || root._candidates.length === 0)
+                return;
+            const present = {};
+            for (let i = 0; i < commonDir.count; i++) {
+                const name = commonDir.get(i, "fileName");
+                if (name && name.endsWith(".json"))
+                    present[name.slice(0, -5)] = true;
+            }
+            root._commonPresent = present;
             root._pickCommonTranslation();
+            Qt.callLater(() => root._commonListed = true);
         }
     }
 
@@ -165,12 +189,7 @@ Singleton {
     }
 
     function _pickCommonTranslation() {
-        const present = {};
-        for (let i = 0; i < commonDir.count; i++) {
-            const name = commonDir.get(i, "fileName");
-            if (name && name.endsWith(".json"))
-                present[name.slice(0, -5)] = true;
-        }
+        const present = _commonPresent;
         for (let i = 0; i < _candidates.length; i++) {
             if (!present[_candidates[i]])
                 continue;
@@ -201,16 +220,23 @@ Singleton {
     }
 
     function tr(term, context) {
-        if (translationsLoaded) {
-            const hit = _lookup(translations, term, context);
-            if (hit)
-                return hit;
+        // Read before the memo, so calling bindings still follow the catalogs.
+        const table = translationsLoaded ? translations : null;
+        const common = commonTranslationsLoaded ? commonTranslations : null;
+        if (!table && !common)
+            return term;
+        const memo = _memo;
+        if (memo.translations !== table || memo.common !== common) {
+            memo.translations = table;
+            memo.common = common;
+            memo.terms.clear();
         }
-        if (commonTranslationsLoaded) {
-            const hit = _lookup(commonTranslations, term, context);
-            if (hit)
-                return hit;
+        const key = (context || "") + "\u0004" + term;
+        let hit = memo.terms.get(key);
+        if (hit === undefined) {
+            hit = _lookup(table, term, context) || _lookup(common, term, context) || term;
+            memo.terms.set(key, hit);
         }
-        return term;
+        return hit;
     }
 }

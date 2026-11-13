@@ -1,12 +1,15 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 import qs.Common
 import qs.DCommon.Common
+import qs.DCommon.FileBrowser
 import qs.DCommon.Widgets
 import qs.Services
 
-// Document tabs: scrolls sideways, drags to reorder, middle-click closes, double-click renames a draft.
+// Document tabs as pills: scrolls sideways, drags to reorder, middle-click closes, double-click renames a draft,
+// right-click opens the tab menu.
 // Ported from the Dux Files tab row: DReorderList only lays out vertically.
 Item {
     id: row
@@ -16,7 +19,8 @@ Item {
     property var positions: []
     property real dragX: 0
     property real pressOffset: 0
-    readonly property real tabSpacing: Style.spacingXXS
+    readonly property real tabSpacing: Style.spacingXS
+    readonly property real tabHeight: Style.buttonHeightXS
     readonly property real tabMaxWidth: Style.sidebarWidth
     readonly property bool motion: !Style.reduceMotion && Style.currentAnimationSpeed !== Style.AnimationSpeed.None
 
@@ -121,6 +125,22 @@ Item {
     readonly property int currentIndex: Documents.currentIndex
     onCurrentIndexChanged: reveal(currentIndex)
 
+    function openTabMenu(doc, item, point) {
+        tabMenu.doc = doc;
+        const at = item.mapToItem(row, point.x, point.y);
+        tabMenu.openAt(at.x, at.y);
+    }
+
+    // Positions are kept by index, so reset after the repeater has moved its items.
+    Connections {
+        target: Documents.tabModel
+
+        function onRowsMoved() {
+            if (row.draggingIndex < 0)
+                Qt.callLater(row.reset);
+        }
+    }
+
     DFlickable {
         id: strip
 
@@ -135,6 +155,15 @@ Item {
         flickableDirection: Flickable.HorizontalFlick
         contentWidth: strapline.width
         contentHeight: height
+
+        Behavior on contentX {
+            enabled: row.motion && row.draggingIndex < 0
+
+            DAnim {
+                duration: Style.expressiveDurations.expressiveEffects
+                easing.bezierCurve: Style.expressiveCurves.expressiveEffects
+            }
+        }
 
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -163,15 +192,16 @@ Item {
                     readonly property EditorDocument doc: Documents.byTabId(tabId)
                     readonly property bool current: index === Documents.currentIndex
                     readonly property bool dragging: row.draggingIndex === index
-                    readonly property color contentColor: current ? Style.primary : Style.onSurfaceVariant
+                    readonly property color contentColor: current ? Style.onSelectedContainer : Style.onSurfaceVariant
 
                     x: row.physicalX(dragging ? row.dragX : (row.positions[index] ?? 0), width)
                     z: dragging ? 1 : 0
                     focusPolicy: Qt.TabFocus
                     implicitWidth: Math.max(Style.tabMinWidth, Math.min(row.tabMaxWidth, title.implicitWidth + dirtyDot.width + closeButton.width + Style.spacingL + Style.spacingXS))
-                    implicitHeight: row.height
-                    radius: Style.cornerRadiusM
-                    color: dragging ? Style.chipSurface : "transparent"
+                    y: (row.height - height) / 2
+                    implicitHeight: row.tabHeight
+                    radius: Style.fullRadius(width, height)
+                    color: current ? Style.selectedContainer : (dragging ? Style.chipSurface : "transparent")
                     Accessible.role: Accessible.PageTab
                     Accessible.name: tab.doc?.title ?? ""
                     Accessible.selected: current
@@ -186,6 +216,7 @@ Item {
                     StateLayer {
                         control: tab
                         stateColor: tab.contentColor
+                        tooltipText: tab.doc?.path ? AppPaths.shortenHome(tab.doc.path) : null
                     }
 
                     FocusRing {
@@ -195,6 +226,11 @@ Item {
                     TapHandler {
                         acceptedButtons: Qt.MiddleButton
                         onTapped: Documents.closeTab(tab.index, false)
+                    }
+
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: eventPoint => row.openTabMenu(tab.doc, tab, eventPoint.position)
                     }
 
                     Rectangle {
@@ -235,17 +271,9 @@ Item {
                         iconName: "close"
                         iconSize: Style.iconSizeSmall
                         iconColor: tab.contentColor
+                        opacity: tab.current || tab.hovered || hovered || visualFocus ? 1 : 0
                         tooltipText: I18n.tr("Close Tab", "tooltip on the button closing a tab")
                         onClicked: Documents.closeTab(tab.index, false)
-                    }
-
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        width: tab.current ? Math.max(Style.tabIndicatorMinWidth, tab.width - Style.spacingL) : 0
-                        height: Style.tabIndicatorHeight
-                        radius: height / 2
-                        color: Style.primary
                     }
 
                     Behavior on x {
@@ -300,11 +328,82 @@ Item {
         onClicked: Documents.newDraft()
     }
 
-    Rectangle {
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: Style.dividerWidth
-        color: Style.outlineVariant
+    FileMenu {
+        id: tabMenu
+
+        property EditorDocument doc: null
+        readonly property int index: doc ? Documents.tabs.indexOf(doc) : -1
+
+        width: Style.spacingXL * 12
+        onClosed: doc = null
+
+        FileMenuItem {
+            iconName: "close"
+            text: I18n.tr("Close", "tab menu item")
+            shortcutText: Shortcuts.hint("closeTab")
+            onClicked: {
+                const doc = tabMenu.doc;
+                tabMenu.close();
+                Documents.closeTab(Documents.tabs.indexOf(doc), false);
+            }
+        }
+
+        FileMenuItem {
+            iconName: "tab_close"
+            enabled: Documents.tabs.length > 1
+            text: I18n.tr("Close Others", "tab menu item")
+            onClicked: {
+                const doc = tabMenu.doc;
+                tabMenu.close();
+                Documents.closeOthers(doc);
+            }
+        }
+
+        FileMenuItem {
+            iconName: "tab_close_right"
+            enabled: tabMenu.index >= 0 && tabMenu.index < Documents.tabs.length - 1
+            text: I18n.tr("Close to the Right", "tab menu item")
+            onClicked: {
+                const doc = tabMenu.doc;
+                tabMenu.close();
+                Documents.closeToRight(doc);
+            }
+        }
+
+        FileMenuItem {
+            iconName: "tab"
+            enabled: Documents.closedTabs.length > 0
+            text: I18n.tr("Reopen Closed Tab", "tab menu item")
+            shortcutText: Shortcuts.hint("reopenTab")
+            onClicked: {
+                tabMenu.close();
+                Documents.reopenClosedTab();
+            }
+        }
+
+        FileMenuDivider {}
+
+        FileMenuItem {
+            iconName: "content_copy"
+            visible: tabMenu.doc !== null && !tabMenu.doc.isDraft
+            text: I18n.tr("Copy Path", "tab menu item")
+            onClicked: {
+                const path = tabMenu.doc.path;
+                tabMenu.close();
+                Quickshell.clipboardText = path;
+                ToastService.showInfo(I18n.tr("Path copied", "notice after copying a file path"));
+            }
+        }
+
+        FileMenuItem {
+            iconName: "edit"
+            visible: tabMenu.doc?.isDraft ?? false
+            text: I18n.tr("Rename…", "tab menu item that names an unsaved document")
+            onClicked: {
+                const doc = tabMenu.doc;
+                tabMenu.close();
+                row.renameRequested(doc);
+            }
+        }
     }
 }

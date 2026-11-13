@@ -2,6 +2,7 @@ package spell
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -19,23 +20,29 @@ type word struct {
 }
 
 // masks cover text that is not prose even inside a comment. A pattern with a group masks only the group.
-var masks = []*regexp.Regexp{
-	regexp.MustCompile("`[^`]*`"),
-	regexp.MustCompile(`[a-zA-Z][a-zA-Z0-9+.-]*://[^\s<>"'` + "`" + `]+`),
-	regexp.MustCompile(`\bwww\.[^\s<>"'` + "`" + `]+`),
-	regexp.MustCompile(`[\w.%+-]+@[\w-]+(?:\.[\w-]+)+`),
-	regexp.MustCompile(`(?:^|[^\w.~/])((?:~|\.\.?)/\S*|/[\w.-]+/\S*)`),
-	regexp.MustCompile(`(?:^|\s)(--[A-Za-z0-9][\w-]*)`),
-	regexp.MustCompile(`\$\{?[A-Za-z_]\w*\}?`),
-	regexp.MustCompile(`\b0[xX][0-9a-fA-F]+\b`),
-	regexp.MustCompile(`#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b`),
+var masks = []struct {
+	re       *regexp.Regexp
+	triggers []string
+}{
+	{regexp.MustCompile("`[^`]*`"), []string{"`"}},
+	{regexp.MustCompile(`[a-zA-Z][a-zA-Z0-9+.-]*://[^\s<>"'` + "`" + `]+`), []string{"://"}},
+	{regexp.MustCompile(`\bwww\.[^\s<>"'` + "`" + `]+`), []string{"www."}},
+	{regexp.MustCompile(`[\w.%+-]+@[\w-]+(?:\.[\w-]+)+`), []string{"@"}},
+	{regexp.MustCompile(`(?:^|[^\w.~/])((?:~|\.\.?)/\S*|/[\w.-]+/\S*)`), []string{"/"}},
+	{regexp.MustCompile(`(?:^|\s)(--[A-Za-z0-9][\w-]*)`), []string{"--"}},
+	{regexp.MustCompile(`\$\{?[A-Za-z_]\w*\}?`), []string{"$"}},
+	{regexp.MustCompile(`\b0[xX][0-9a-fA-F]+\b`), []string{"0x", "0X"}},
+	{regexp.MustCompile(`#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b`), []string{"#"}},
 }
 
 // mask blanks masked text byte for byte, so offsets into the result are offsets into s.
 func mask(s string) string {
 	var out []byte
-	for _, re := range masks {
-		for _, m := range re.FindAllStringSubmatchIndex(s, -1) {
+	for _, mk := range masks {
+		if !slices.ContainsFunc(mk.triggers, func(t string) bool { return strings.Contains(s, t) }) {
+			continue
+		}
+		for _, m := range mk.re.FindAllStringSubmatchIndex(s, -1) {
 			start, end := m[0], m[1]
 			if len(m) > 2 && m[2] >= 0 {
 				start, end = m[2], m[3]

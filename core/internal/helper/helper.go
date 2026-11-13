@@ -21,6 +21,9 @@ const (
 	OpReplace = "replace"
 )
 
+// Ready is the line a write or replace prints on stdout once it is authorized and the file checks out.
+const Ready = "ready"
+
 const (
 	ExitFailed  = 1
 	ExitRefused = 2
@@ -85,7 +88,7 @@ type Failure struct {
 	Error string `json:"error"`
 }
 
-// Success is the last stderr line of a helper run that worked; stdout carries only file bytes.
+// Success is the last stderr line of a helper run that worked; stdout carries only file bytes or Ready.
 type Success struct {
 	Identity string `json:"identity"`
 }
@@ -134,12 +137,12 @@ func Run(args []string, stdin io.Reader, stdout io.Writer) (string, error) {
 		if len(rest) != 1 {
 			return "", invalid("write takes one path")
 		}
-		return create(rest[0], stdin)
+		return create(rest[0], stdin, stdout)
 	case OpReplace:
 		if len(rest) != 2 {
 			return "", invalid("replace takes a path and an identity")
 		}
-		return replace(rest[0], rest[1], stdin)
+		return replace(rest[0], rest[1], stdin, stdout)
 	default:
 		return "", invalid("unknown operation: " + op)
 	}

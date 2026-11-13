@@ -2,6 +2,7 @@
 package elevate
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
@@ -14,7 +15,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/duxlabs-dev/dux-go/portal"
+
+	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
 	"github.com/duxlabs-dev/dux-edit/core/internal/helper"
 	"github.com/duxlabs-dev/dux-edit/core/internal/xdg"
 )
@@ -35,6 +40,10 @@ const (
 const maxRead = 32 << 20
 
 const frameSize = 1 << 20
+
+// Once the helper has all its input it only has to fsync; past this it is stuck, and the user cannot
+// signal a root process. The password prompt comes before that point and is not bounded.
+var waitAfterEOF = 30 * time.Second
 
 var (
 	ErrUnavailable = errors.New("elevation unavailable")
@@ -59,7 +68,7 @@ func New() *Client { return &Client{} }
 
 // Available returns "" when an elevated save can be offered, otherwise the reason it cannot.
 func (c *Client) Available() string {
-	if inFlatpak() {
+	if portal.InFlatpak() {
 		return ReasonSandboxed
 	}
 	if _, err := c.pkexecPath(); err != nil {
@@ -73,14 +82,6 @@ func (c *Client) Available() string {
 		return ReasonNoPolicy
 	}
 	return ""
-}
-
-func inFlatpak() bool {
-	if os.Getenv("FLATPAK_ID") != "" {
-		return true
-	}
-	_, err := os.Stat("/.flatpak-info")
-	return err == nil
 }
 
 func (c *Client) pkexecPath() (string, error) {
@@ -152,16 +153,26 @@ func (c *Client) Read(path string) ([]byte, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	out := &capped{limit: maxRead}
 	var stderr bytes.Buffer
-	cmd.Stdout = out
 	cmd.Stderr = &stderr
-	err = cmd.Run()
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, "", failure(err, nil)
+	}
+	if err := cmd.Start(); err != nil {
+		return nil, "", failure(err, nil)
+	}
+	out := &capped{limit: maxRead}
+	_, copyErr := io.Copy(out, stdout)
+	stdout.Close()
+	err = waitBounded(cmd, &stderr)
 	switch {
 	case out.over:
 		return nil, "", ErrTooLarge
 	case err != nil:
-		return nil, "", failure(err, stderr.Bytes())
+		return nil, "", err
+	case copyErr != nil:
+		return nil, "", failure(copyErr, nil)
 	}
 	return out.buf.Bytes(), identity(stderr.Bytes()), nil
 }
@@ -183,12 +194,51 @@ func (c *Client) stream(data []byte, op string, args ...string) (string, error) 
 		return "", err
 	}
 	var stderr bytes.Buffer
-	cmd.Stdin = framed(data)
 	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return "", failure(err, stderr.Bytes())
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return "", failure(err, nil)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", failure(err, nil)
+	}
+	if err := cmd.Start(); err != nil {
+		return "", failure(err, nil)
+	}
+	line, readErr := bufio.NewReader(stdout).ReadString('\n')
+	ready := readErr == nil && line == helper.Ready+"\n"
+	var writeErr error
+	if ready {
+		_, writeErr = io.Copy(stdin, framed(data))
+	}
+	stdin.Close()
+	err = waitBounded(cmd, &stderr)
+	switch {
+	case err != nil:
+		return "", err
+	case !ready:
+		return "", &Error{Code: helper.CodeIO, Err: errors.New("the helper did not confirm the file")}
+	case writeErr != nil:
+		return "", failure(writeErr, nil)
 	}
 	return identity(stderr.Bytes()), nil
+}
+
+func waitBounded(cmd *exec.Cmd, stderr *bytes.Buffer) error {
+	result := make(chan error, 1)
+	go func() { result <- cmd.Wait() }()
+	timer := time.NewTimer(waitAfterEOF)
+	defer timer.Stop()
+	select {
+	case err := <-result:
+		if err == nil {
+			return nil
+		}
+		return failure(err, stderr.Bytes())
+	case <-timer.C:
+		return &Error{Code: helper.CodeIO, Err: errors.New("the administrator helper did not exit")}
+	}
 }
 
 func identity(stderr []byte) string {
@@ -215,15 +265,14 @@ func (c *Client) command(op string, args ...string) (*exec.Cmd, error) {
 
 // The helper refuses every symlink, so a link like /etc/resolv.conf is resolved here, as the user.
 func resolve(path string) string {
-	path = filepath.Clean(path)
-	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+	if resolved, err := atomicfile.Resolve(path); err == nil {
 		return resolved
 	}
-	dir, base := filepath.Split(path)
-	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
-		return filepath.Join(resolved, base)
+	// The user may not see into the file's directory; a link left in the path is refused by the helper.
+	if dir, err := filepath.EvalSymlinks(filepath.Dir(path)); err == nil {
+		return filepath.Join(dir, filepath.Base(path))
 	}
-	return path
+	return filepath.Clean(path)
 }
 
 // The zero-length frame at the end commits; a stream cut short before it changes nothing.

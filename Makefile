@@ -15,7 +15,7 @@ METAINFO_DIR=$(DATA_DIR)/metainfo
 # polkit reads actions from /usr/share only, whatever the prefix.
 POLKIT_ACTIONS_DIR ?= /usr/share/polkit-1/actions
 
-.PHONY: all build dev run clean test test-js fmt vet lint update-common update-qtbase check-bin install install-metainfo install-polkit uninstall help
+.PHONY: all build dev run clean test test-js fmt vet lint lint-qml update-common update-qtbase check-bin install install-metainfo install-polkit uninstall help
 
 all: build
 
@@ -45,6 +45,9 @@ vet:
 
 lint:
 	@$(MAKE) -C $(CORE_DIR) lint
+
+lint-qml:
+	@./scripts/qmllint-entrypoints.sh
 
 update-common:
 	git submodule update --remote --merge dux-qml-common
@@ -86,6 +89,7 @@ help:
 	@echo "build          - Release build, UI embedded (QTBASE=1 also embeds the dux-qt-base runtime)"
 	@echo "dev            - Fast build without the embedded UI"
 	@echo "run            - dev build, then run against quickshell/ with hot reload"
+	@echo "lint-qml       - qmllint shell.qml through the Quickshell tooling VFS (needs quickshell/.qmlls.ini)"
 	@echo "test fmt vet lint clean"
 	@echo "update-common  - Bump the dux-qml-common submodule"
 	@echo "update-qtbase  - Bump the dux-qt-base submodule"

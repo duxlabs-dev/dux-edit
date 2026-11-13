@@ -109,6 +109,9 @@ func (h *harness) open(id string, d *fakeDoc) {
 	h.docs.mu.Lock()
 	h.docs.docs[id] = d
 	h.docs.mu.Unlock()
+	h.s.mu.Lock()
+	h.s.open[id] = true
+	h.s.mu.Unlock()
 }
 
 // view sets the range and waits for the worker so the test reads settled events.
@@ -176,6 +179,9 @@ func TestCacheAvoidsSecondRun(t *testing.T) {
 	assert.Len(t, h.runner.calls, 1)
 
 	h.s.DocClosed("a")
+	h.view("a", 0, 0, -1, -1)
+	assert.Len(t, h.runner.calls, 1, "a view that lands after the close does not bring the document back")
+	h.open("a", &fakeDoc{lines: []string{"one wrdd"}})
 	h.view("a", 0, 0, -1, -1)
 	assert.Len(t, h.runner.calls, 2, "closing the last document drops the cache")
 }

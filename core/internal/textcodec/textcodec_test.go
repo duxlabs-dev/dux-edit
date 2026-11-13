@@ -81,3 +81,63 @@ func TestEncodeNamesTheUnencodableRune(t *testing.T) {
 	require.ErrorAs(t, err, &unencodable)
 	assert.Equal(t, '€', unencodable.Rune)
 }
+
+func TestNamedEncodingsReportALossyRoundTrip(t *testing.T) {
+	lossy := map[string][]byte{
+		"shift_jis":   {0x87, 0x90, '\n'},
+		"euc-jp":      {0x8F, 0xA2, 0xB7, '\n'},
+		"iso-2022-jp": {0x1B, '$', '@', 0x30, 0x21, 0x1B, '(', 'B', '\n'},
+	}
+	for name, raw := range lossy {
+		doc, err := Load(raw, name)
+		require.NoError(t, err, name)
+		assert.True(t, doc.Lossy, name)
+		out, err := Encode(doc.Text, doc.Info)
+		require.NoError(t, err, name)
+		assert.NotEqual(t, raw, out, "%s: a save would change these bytes", name)
+	}
+
+	exact := map[string][]byte{
+		"shift_jis":    {0x93, 0xFA, 0x96, 0x7B, '\n'},
+		"windows-1252": {'c', 'a', 'f', 0xE9, ' ', 0x80, '\n'},
+		"gbk":          {0x80, '\n'},
+	}
+	for name, raw := range exact {
+		doc, err := Load(raw, name)
+		require.NoError(t, err, name)
+		assert.False(t, doc.Lossy, name)
+	}
+}
+
+func TestLatin1FallbackIsMarked(t *testing.T) {
+	doc, err := Load([]byte("caf\xC3\xA9 \xFF\n"), "")
+	require.NoError(t, err)
+	assert.Equal(t, Latin1, doc.Encoding)
+	assert.True(t, doc.Fallback, "invalid UTF-8 opened as ISO-8859-1 is a guess")
+	assert.Equal(t, "cafÃ© ÿ\n", doc.Text)
+
+	doc, err = Load([]byte("caf\xE9\n"), "latin1")
+	require.NoError(t, err)
+	assert.False(t, doc.Fallback, "a chosen encoding is not a guess")
+
+	doc, err = Load([]byte("café\n"), "")
+	require.NoError(t, err)
+	assert.False(t, doc.Fallback)
+}
+
+func TestNULIsBinaryBehindABOMOrANamedEncoding(t *testing.T) {
+	for name, c := range map[string]struct {
+		raw      []byte
+		encoding string
+	}{
+		"utf-8 bom":    {[]byte("\xEF\xBB\xBFa\x00b"), ""},
+		"utf-16le bom": {[]byte{0xFF, 0xFE, 'a', 0, 0, 0, 'b', 0}, ""},
+		"utf-16be bom": {[]byte{0xFE, 0xFF, 0, 'a', 0, 0}, ""},
+		"named":        {[]byte("a\x00b"), "windows-1252"},
+	} {
+		doc, err := Load(c.raw, c.encoding)
+		require.NoError(t, err, name)
+		assert.True(t, doc.Binary, name)
+		assert.Empty(t, doc.Text, name)
+	}
+}
