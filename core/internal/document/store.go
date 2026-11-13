@@ -188,7 +188,6 @@ func (d *Doc) Await(ctx context.Context, version int64) error {
 	}
 }
 
-// bumpLocked wakes Await callers.
 func (d *Doc) bumpLocked() {
 	close(d.changed)
 	d.changed = make(chan struct{})
@@ -625,7 +624,6 @@ func (s *Store) SetTitle(docID, title string) any {
 	return map[string]any{"ok": true}
 }
 
-// Shutdown flushes swaps and releases watches and locks.
 func (s *Store) Shutdown() {
 	s.Flush()
 	s.mu.Lock()

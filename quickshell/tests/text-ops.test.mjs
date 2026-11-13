@@ -61,7 +61,6 @@ test("brackets match across lines and nesting inside the window", () => {
     const brace = text.indexOf("{");
     assert.deepEqual([...ops.matchBracket(index, brace, 0, 2, 1000)], [brace, text.indexOf("}")]);
     assert.equal(ops.matchBracket(index, text.indexOf("b"), 0, 2, 1000), null);
-    // The partner outside the window or past the budget is not found.
     assert.equal(ops.matchBracket(index, open + 1, 0, 1, 1000), null);
     assert.equal(ops.matchBracket(index, open + 1, 0, 2, 5), null);
     assert.equal(ops.matchBracket(index, close, 0, 1, 1000), null);

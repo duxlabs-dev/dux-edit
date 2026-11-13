@@ -49,7 +49,6 @@ func TestEditsReachTheMirrorInVersionOrder(t *testing.T) {
 	require.Equal(t, "hello", opened["text"])
 	docID := opened["docId"]
 
-	// Version 2 arrives first and must wait for version 1.
 	request(t, b, "doc.edit", map[string]any{"docId": docID, "version": 2, "start": 6, "removed": 0, "text": "?", "length": 7})
 	request(t, b, "doc.edit", map[string]any{"docId": docID, "version": 1, "start": 5, "removed": 0, "text": "!", "length": 6})
 

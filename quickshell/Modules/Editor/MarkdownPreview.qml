@@ -61,7 +61,6 @@ Item {
 
     function apply(result) {
         if (result.ok === true) {
-            // An unchanged render skips the rich-text parse and layout.
             if (html !== result.html)
                 html = result.html;
             message = "";

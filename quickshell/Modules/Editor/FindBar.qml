@@ -124,7 +124,6 @@ Rectangle {
         matchesUpdated();
     }
 
-    // The match the editor has selected, or -1.
     function matchAtSelection() {
         const i = firstFrom(editor.selectionStart);
         if (i >= matchCount || matches[i * 2] !== editor.selectionStart || matches[i * 2] + matches[i * 2 + 1] !== editor.selectionEnd)
@@ -132,7 +131,6 @@ Rectangle {
         return i;
     }
 
-    // Index of the first match starting at or after `offset`.
     function firstFrom(offset) {
         let low = 0;
         let high = matchCount;

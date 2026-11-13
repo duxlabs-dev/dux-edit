@@ -112,7 +112,6 @@ func split(path string) (string, string) {
 	return path[:i], path[i+1:]
 }
 
-// Save writes data to path and returns the new identity.
 func Save(path string, data []byte, opts Options) (string, error) {
 	target, err := Resolve(path)
 	if err != nil {

@@ -8,9 +8,8 @@ import qs.DCommon.FileBrowser
 import qs.DCommon.Widgets
 import qs.Services
 
-// Document tabs as pills: scrolls sideways, drags to reorder, middle-click closes, double-click renames a draft,
-// right-click opens the tab menu.
-// Ported from the Dux Files tab row: DReorderList only lays out vertically.
+// Document tabs as pills: scrolls sideways, drags to reorder, middle-click closes, double-click renames a draft.
+// Not a DReorderList, which only lays out vertically.
 Item {
     id: row
 

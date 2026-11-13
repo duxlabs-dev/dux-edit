@@ -32,13 +32,10 @@ const (
 )
 
 const (
-	// Lexers that cannot resume are re-lexed whole on every change, so the cap is what one parse may cost
-	// per keystroke. Markdown re-parses only the blocks around an edit, but one that reaches past them
-	// costs a whole parse.
+	// Lexers that cannot resume re-lex whole on every change, so these caps bound the cost per keystroke.
 	wholeMaxBytes    = 64 << 10
 	markdownMaxBytes = 64 << 10
-	// A save re-lexes the whole document to catch lookahead the checkpoints miss. Past this size that costs
-	// seconds per autosave, so a larger file keeps the gap until reopened.
+	// A save re-lexes the whole document to catch missed lookahead; past this size it costs seconds per autosave.
 	saveRelexBytes = 256 << 10
 	// restartBack lines of context before an edit cover lookahead that reaches into the next lines.
 	restartBack = 8
@@ -46,8 +43,7 @@ const (
 	windowMargin = 512
 	firstChunk   = 512
 	maxChunk     = 16384
-	// A view more than specGap lines below the lexed prefix is first lexed alone, starting specBack lines
-	// above it, and shown until the exact lex arrives.
+	// A view more than specGap lines below the lexed prefix is lexed alone from specBack lines above it, until the exact lex arrives.
 	specGap  = 1024
 	specBack = 128
 	specMax  = 1024

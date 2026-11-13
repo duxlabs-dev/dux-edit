@@ -95,8 +95,6 @@ func lowerASCII(b []byte) []byte {
 
 // matches returns the submatch indexes of the non-empty matches. Whole word is checked here rather than
 // with \b, which is ASCII-only in RE2 and would never match a word ending in é.
-//
-// The regex engine is asked for growing batches until enough (kept) or the text runs out.
 // A nil enough takes every match.
 func (mt matcher) matches(text string, wholeWord bool, first int, enough func(kept [][]int) bool) [][]int {
 	if mt.re == nil {

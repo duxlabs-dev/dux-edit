@@ -8,8 +8,7 @@ import qs.DCommon.FileBrowser
 import qs.DCommon.Widgets
 import qs.Services
 
-// Advanced shows the full status: counts, path, position, save state, encoding, line endings, language and
-// spellcheck. Simple shows only the counts, the save state and the position.
+// Advanced shows the full status; Simple only the counts, the save state and the position.
 Rectangle {
     id: root
 

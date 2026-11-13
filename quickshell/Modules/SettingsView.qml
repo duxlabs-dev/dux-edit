@@ -9,8 +9,7 @@ import qs.Modules.Settings
 import qs.Services
 import "../DCommon/Common/StockTheme.js" as StockTheme
 
-// In-window settings: a list of categories, each opening as a subpage. Loaded only while open,
-// and only the shown page exists.
+// In-window settings: a list of categories, each opening as a subpage. Loaded only while open.
 Rectangle {
     id: root
 

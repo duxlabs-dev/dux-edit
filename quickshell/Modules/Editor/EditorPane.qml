@@ -125,8 +125,7 @@ Item {
         replaceRange(textEdit.selectionStart, textEdit.selectionEnd, text);
     }
 
-    // Offsets are UTF-16 units. The common ends are kept, so a pure insert or delete is one undo step.
-    // Compared with the stored text: the mirror reads no-break spaces as spaces.
+    // The common ends are kept, so a pure insert or delete is one undo step. Compared with the stored text, not the mirror's.
     function replaceRange(start, end, text) {
         const change = EditTracker.diff(decorations.text(start, end), text);
         if (!change)
@@ -440,7 +439,6 @@ Item {
         textEdit.selectAll();
     }
 
-    // Selects [start, end) and scrolls it into view; used by the find bar.
     function selectRange(start, end) {
         textEdit.select(start, end);
         revealRect(textEdit.positionToRectangle(start));
@@ -457,7 +455,6 @@ Item {
         edit(at, 1, found[2] === " " ? "x" : " ");
     }
 
-    // Asks the core to check the visible lines again, after the dictionary changed.
     function respell() {
         mirror.cursorLine = -1;
         mirror.spellSent = "";
@@ -701,7 +698,6 @@ Item {
         return low;
     }
 
-    // Rebuilds the slots when the viewport leaves the built range, or always with force.
     function refreshView(force) {
         if (mirror.loading || !shown || flickable.height <= 0)
             return;
@@ -764,7 +760,6 @@ Item {
         refreshView(true);
     }
 
-    // Applies new spans, spelling or matches to the built lines.
     function redecorate() {
         if (mirror.builtLast < 0)
             return;
@@ -1059,9 +1054,7 @@ Item {
                 id: textEdit
 
                 x: root.centered ? Math.round((flickable.width - width) / 2) : 0
-                // Every width change lays the whole document out again (about 1 s on 2 MB), and reading
-                // implicitWidth does so twice per edit. Unwrapped, the width grows a screen at a time and
-                // ignores window and gutter resizes.
+                // A width change lays the whole document out again (about 1 s on 2 MB), so unwrapped it grows a screen at a time.
                 width: root.wrapping ? (root.centered ? root.proseWidth : root.wrapWidth) : Math.ceil((contentWidth + leftPadding + rightPadding + 1) / root.screenWidth) * root.screenWidth
                 height: Math.max(implicitHeight, flickable.height)
                 padding: root.padding

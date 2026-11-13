@@ -47,11 +47,9 @@ test("applyEdit reports the replaced line range like buffer.Change", () => {
     [text, change] = edit(index, text, 6, 1, "\nA\nB\nC");
     assert.deepEqual({ ...change }, { startLine: 1, oldLines: 1, newLines: 4, column: 1, removed: 1, inserted: 6 });
     assertMatches(index, text);
-    // Removing a line break joins two lines.
     [text, change] = edit(index, text, text.indexOf("\n"), 1, "");
     assert.deepEqual({ ...change }, { startLine: 0, oldLines: 2, newLines: 1, column: 4, removed: 1, inserted: 0 });
     assertMatches(index, text);
-    // Emoji: surrogate pairs count as two units.
     [text, change] = edit(index, text, text.length, 0, "😀\n😀");
     assertMatches(index, text);
     assert.equal(index.startOf(index.count - 1), text.length - 2);

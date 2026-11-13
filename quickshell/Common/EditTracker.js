@@ -1,7 +1,6 @@
 .pragma library
 
-// Native substring comparison beats a charCodeAt loop by orders of magnitude on multi-megabyte text, so
-// the common ends are found by galloping over chunks and then halving into the first mismatch.
+// Compares in native substring chunks: a charCodeAt loop is far too slow on multi-megabyte text.
 const FIRST_STEP = 1024;
 
 function isHighSurrogate(code) {
@@ -38,7 +37,6 @@ function diff(before, after) {
     if (before === after)
         return null;
     const shortest = Math.min(before.length, after.length);
-    // One copy per probe: startsWith and endsWith compare in place.
     let prefix = gallop(shortest, (n, size) => after.startsWith(before.substring(n, n + size), n));
     if (prefix > 0 && isHighSurrogate(before.charCodeAt(prefix - 1)))
         prefix--;

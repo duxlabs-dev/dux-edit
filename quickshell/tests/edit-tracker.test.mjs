@@ -26,7 +26,6 @@ test("the change is minimal for inserts, deletes and replacements", () => {
     assert.deepEqual({ ...check("abXc", "abc") }, { start: 2, removed: 1, text: "" });
     assert.deepEqual({ ...check("", "new") }, { start: 0, removed: 0, text: "new" });
     assert.deepEqual({ ...check("gone", "") }, { start: 0, removed: 4, text: "" });
-    // Repeated characters: the prefix takes as much as it can.
     assert.deepEqual({ ...check("aaaa", "aaaaa") }, { start: 4, removed: 0, text: "a" });
 });
 

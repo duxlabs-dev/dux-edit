@@ -278,7 +278,6 @@ QtObject {
         });
     }
 
-    // Called by the editor pane for every change it makes to its text.
     function edited(start, removed, text, length) {
         version++;
         Backend.notify("doc.edit", {

@@ -33,7 +33,6 @@ Singleton {
     property bool resumed: false
     property bool restored: false
     property var pendingOpens: []
-    // Paths approved past the large-file question, for this run.
     property var approvedLarge: ({})
 
     readonly property Component documentComponent: Component {
@@ -156,7 +155,6 @@ Singleton {
         activate(tabs.length - 1);
     }
 
-    // A fresh start's empty draft gives way to the first file opened.
     function pristineDraft() {
         if (tabs.length !== 1)
             return null;
@@ -226,7 +224,6 @@ Singleton {
                 }, null);
             return;
         }
-        // Not connected: keep the tab, the next activation tries again.
         if (result.error)
             return;
         // The window went away while this loaded: a hidden window holds no documents.
@@ -256,7 +253,6 @@ Singleton {
             largeFileConfirmationNeeded(doc, result.size || 0);
             return;
         case "NOTFOUND":
-            // The swap went away, for example an empty draft that never wrote one.
             if (doc.swapId !== "") {
                 doc.swapId = "";
                 load(doc, options, then);
@@ -271,7 +267,6 @@ Singleton {
             break;
         case "EIO":
         case "LOCKED":
-            // Its swap holds unsaved edits that could not be read just now; the tab stays so they are not forgotten.
             if (doc.swapId !== "") {
                 ToastService.showError(openErrorText(doc, result));
                 return;
@@ -371,7 +366,6 @@ Singleton {
         if (doc.loaded || doc.held) {
             doc.close(true);
         } else if (doc.dirty && doc.swapId !== "") {
-            // Unloaded since the window was hidden, with edits in its swap.
             Backend.call("recovery.discard", {
                 "swapId": doc.swapId
             }, null);
@@ -672,7 +666,6 @@ Singleton {
         }
     }
 
-    // The conflict banner's "Keep My Edits".
     function keepMine(doc) {
         saveWith(doc, {
             "force": true
@@ -685,7 +678,6 @@ Singleton {
             if (result.error || result.ok)
                 return;
             if (result.code === "NOTFOUND") {
-                // Gone since the change was reported: the text in the editor may be its last copy.
                 doc.conflict = "deleted";
                 ToastService.showWarning(I18n.tr("%1 was deleted from disk.", "notice; %1 is a file name").arg(doc.title));
                 return;
@@ -858,7 +850,6 @@ Singleton {
             });
     }
 
-    // The window appeared. Documents load once the core is reachable.
     function resume() {
         resumed = true;
         PluginService.resume?.();
@@ -1012,7 +1003,6 @@ Singleton {
         function onConnectedChanged() {
             if (!Backend.connected)
                 return;
-            // Edits made while the socket was down never reached the core.
             for (const doc of root.tabs) {
                 if (doc.loaded)
                     doc.resync(null, false);

@@ -60,7 +60,6 @@ Singleton {
         fontSize = Math.max(minFontSize, Math.min(maxFontSize, size));
     }
 
-    // An empty color goes back to the theme's.
     function setSyntaxColor(role: string, color: string): void {
         const next = Object.assign({}, syntaxColors);
         if (color === "")

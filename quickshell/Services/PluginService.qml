@@ -18,7 +18,6 @@ Singleton {
 
     // Manifests from plugins.list: [{id, name, description, version, author, icon, dir, editor, settings, error}]
     property var availablePlugins: []
-    // Directories the last scan read.
     property var pluginDirs: []
     property bool scanning: false
     // Plugin id to its live EditorPluginComponent.

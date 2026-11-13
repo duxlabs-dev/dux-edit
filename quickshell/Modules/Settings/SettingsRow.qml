@@ -6,7 +6,7 @@ import qs.Common
 import qs.DCommon.Common
 import qs.DCommon.Widgets
 
-// One row of a grouped settings list. Ported from the Dux Files settings row.
+// One row of a grouped settings list.
 T.Control {
     id: root
 

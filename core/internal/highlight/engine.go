@@ -36,7 +36,6 @@ type incLexer struct {
 	stacks map[string]int32
 	byID   [][]string
 
-	// Per run.
 	outer     *chroma.LexerState
 	resume    []string
 	resumeAt  int

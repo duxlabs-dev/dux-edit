@@ -1,11 +1,18 @@
 # Dux Edit
 
 <div align="center">
-  <img src="assets/dev.duxlabs.edit.svg" alt="Dux Edit" width="160">
+  <a href="https://duxlabs.dev">
+    <img src="assets/danklogo.svg" alt="Dux Edit" width="200">
+  </a>
 
 ### A text and document editor for the dux desktop
 
 Built with [Quickshell](https://quickshell.org/) and [Go](https://go.dev/)
+
+[![GitHub stars](https://img.shields.io/github/stars/duxlabs-dev/dux-edit?style=for-the-badge&labelColor=101418&color=ffd700)](https://github.com/duxlabs-dev/dux-edit/stargazers)
+[![GitHub License](https://img.shields.io/github/license/duxlabs-dev/dux-edit?style=for-the-badge&labelColor=101418&color=b9c8da)](https://github.com/duxlabs-dev/dux-edit/blob/master/LICENSE)
+[![Discord](https://img.shields.io/badge/discord-join?style=for-the-badge&logo=discord&logoColor=ffffff&label=discord&labelColor=101418&color=5865f2)](https://discord.gg/ppWTpKmPgT)
+[![Ko-Fi donate](https://img.shields.io/badge/donate-kofi?style=for-the-badge&logo=ko-fi&logoColor=ffffff&label=ko-fi&labelColor=101418&color=f16061&link=https%3A%2F%2Fko-fi.com%2Fduxlabs)](https://ko-fi.com/duxlabs)
 
 </div>
 

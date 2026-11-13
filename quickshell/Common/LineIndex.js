@@ -2,9 +2,8 @@
 
 const SPLICE_LIMIT = 10000;
 
-// The pane's copy of the text as lines (UTF-16, without "\n") plus their start offsets. Entries of `starts`
-// from `shiftFrom` on are stored without `shift`, so typing in one place costs nothing for the lines after
-// it; the shift is written out only between edit sites.
+// The pane's copy of the text as lines (UTF-16, without "\n") plus start offsets. `starts` from `shiftFrom`
+// on omit `shift`, so typing in one place stays cheap; it is written out only between edit sites.
 class LineIndex {
     constructor() {
         this.lines = [""];
@@ -62,7 +61,6 @@ class LineIndex {
         return low;
     }
 
-    // Text in [start, end), read from the lines.
     text(start, end) {
         start = Math.max(0, Math.min(start, this.length));
         end = Math.max(start, Math.min(end, this.length));
@@ -127,7 +125,6 @@ class LineIndex {
             this.count = count;
             this.shiftFrom += moved;
         }
-        // Fresh starts are absolute, so they sit before shiftFrom.
         let at = lineStart;
         for (let i = 1; i < fresh.length; i++) {
             at += fresh[i - 1].length + 1;
@@ -146,9 +143,8 @@ class LineIndex {
 
 const MAX_TRACKED_EDITS = 512;
 
-// Per-line values (spans, misspellings) that follow the pane's edits. Values computed by the core at an
-// older version are moved through the edits made since; lines those edits touched are dropped. With a
-// stride, values are flat [col, len, ...] runs.
+// Per-line values (spans, misspellings) that follow the pane's edits; stale ones from the core are moved
+// through later edits or dropped. With a stride, values are flat [col, len, ...] runs.
 class LineMap {
     constructor(stride) {
         this.lines = new Map();
