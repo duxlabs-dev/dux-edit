@@ -1,21 +1,16 @@
 .pragma library
 
-// Pure text logic behind the editor's line and selection commands. Lines are strings without "\n".
-
-const OPEN = "([{";
-const CLOSE = ")]}";
+// Lines exclude their trailing "\n".
 
 function leadingWhitespace(text) {
     return /^[ \t]*/.exec(text)[0];
 }
 
-// Where Home goes: the first non-blank column, or the line start when already there.
 function smartHome(text, column) {
     const first = leadingWhitespace(text).length;
     return column === first ? 0 : first;
 }
 
-// Adds `unit` to every non-empty line. Returns {lines, removed, added, changed}.
 function indentLines(lines, unit) {
     const out = new Array(lines.length);
     const removed = new Array(lines.length).fill(0);
@@ -235,64 +230,4 @@ function countWords(lines) {
             words += found.length;
     }
     return words;
-}
-
-// The bracket next to `offset` (before it first) and its partner, as [offset, offset], or null.
-// Reads at most `budget` units within [firstLine, lastLine].
-function matchBracket(index, offset, firstLine, lastLine, budget) {
-    const line = index.lineAt(offset);
-    if (line < firstLine || line > lastLine)
-        return null;
-    const text = index.lineText(line);
-    const column = offset - index.startOf(line);
-    for (const at of [column - 1, column]) {
-        if (at < 0 || at >= text.length)
-            continue;
-        const ch = text[at];
-        const open = OPEN.indexOf(ch);
-        const close = CLOSE.indexOf(ch);
-        if (open < 0 && close < 0)
-            continue;
-        const partner = open >= 0 ? scanForward(index, line, at, ch.charCodeAt(0), CLOSE.charCodeAt(open), lastLine, budget) : scanBackward(index, line, at, OPEN.charCodeAt(close), ch.charCodeAt(0), firstLine, budget);
-        return partner < 0 ? null : [index.startOf(line) + at, partner];
-    }
-    return null;
-}
-
-function scanForward(index, line, column, open, close, lastLine, budget) {
-    let depth = 0;
-    for (let l = line; l <= lastLine; l++) {
-        const text = index.lineText(l);
-        for (let i = l === line ? column : 0; i < text.length; i++) {
-            if (--budget < 0)
-                return -1;
-            const code = text.charCodeAt(i);
-            if (code === open)
-                depth++;
-            else if (code === close && --depth === 0)
-                return index.startOf(l) + i;
-        }
-        if (--budget < 0)
-            return -1;
-    }
-    return -1;
-}
-
-function scanBackward(index, line, column, open, close, firstLine, budget) {
-    let depth = 0;
-    for (let l = line; l >= firstLine; l--) {
-        const text = index.lineText(l);
-        for (let i = l === line ? column : text.length - 1; i >= 0; i--) {
-            if (--budget < 0)
-                return -1;
-            const code = text.charCodeAt(i);
-            if (code === close)
-                depth++;
-            else if (code === open && --depth === 0)
-                return index.startOf(l) + i;
-        }
-        if (--budget < 0)
-            return -1;
-    }
-    return -1;
 }

@@ -27,7 +27,7 @@ Dux Edit is a Go binary that carries its own QML UI and runs it on [dux-qt-base]
 
 ## Build and run
 
-You need Go and dux-qt-base 0.4.0 or newer (the `dux-qt-base` package, `libdux-qt-base0` on Debian and Ubuntu). Spellcheck uses `hunspell` and its dictionaries when they are installed.
+You need Go and dux-qt-base 0.4.3 or newer (the `dux-qt-base` package, `libdux-qt-base0` on Debian and Ubuntu). Spellcheck uses `hunspell` and its dictionaries when they are installed.
 
 ```sh
 git clone --recurse-submodules https://github.com/duxlabs-dev/dux-edit.git

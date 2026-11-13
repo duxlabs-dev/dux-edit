@@ -117,8 +117,8 @@ func (d Dir) Remove(id string) {
 	if !ValidID(id) {
 		return
 	}
-	os.Remove(d.file(id, ".json"))
-	os.Remove(d.file(id, ".txt"))
+	_ = os.Remove(d.file(id, ".json"))
+	_ = os.Remove(d.file(id, ".txt"))
 }
 
 // List returns every swap with readable text and sidecar, locked or not.
@@ -184,6 +184,6 @@ func (l *Lock) Release() {
 	if l == nil {
 		return
 	}
-	os.Remove(l.path)
+	_ = os.Remove(l.path)
 	l.f.Close()
 }

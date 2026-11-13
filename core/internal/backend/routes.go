@@ -25,7 +25,6 @@ func fail(code, message string) any {
 	return map[string]any{"ok": false, "code": code, "message": message}
 }
 
-// Every method is registered here and described in registry.go. Add both in the same change.
 // ping, subscribe and unsubscribe are served by dux-go and only described.
 func (b *Backend) routes() *ipc.Mux {
 	mux := ipc.NewMux()
@@ -46,6 +45,7 @@ func (b *Backend) routes() *ipc.Mux {
 	mux.Handle("doc.close", handle(b.docClose))
 	mux.Handle("doc.setTitle", handle(b.docSetTitle))
 	mux.Handle("doc.text", handle(b.docText))
+	mux.Handle("doc.matchBracket", handle(b.docMatchBracket))
 	mux.Handle("doc.flush", handle(b.docFlush))
 	mux.Handle("recovery.list", handle(b.recoveryList))
 	mux.Handle("recovery.discard", handle(b.recoveryDiscard))

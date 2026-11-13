@@ -1,6 +1,7 @@
 package highlight
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -10,6 +11,8 @@ import (
 )
 
 const resumeState = "__resume"
+
+var errUnfinishedToken = errors.New("token extends past lexer window")
 
 // checkpoint is the lexer state at the first rule boundary of a line: where it is and which stack it holds.
 type checkpoint struct {
@@ -154,7 +157,8 @@ func (il *incLexer) emitResume(groups []string, _ *chroma.LexerState) chroma.Ite
 
 // lexRun resumes at checkpoint from in lines[0], or at the document start when from is not ok, and hands
 // fn each finished line with its first rule boundary; fn returns false to stop.
-func (il *incLexer) lexRun(lines []string, from checkpoint, fn func(i int, spans []span, m mark) bool) (err error) {
+// window reports an unfinished closing-delimiter rule before its fallback spans can be stored.
+func (il *incLexer) lexRun(lines []string, from checkpoint, window bool, fn func(i int, spans []span, m mark) bool) (err error) {
 	il.resume, il.resumeAt, il.col16 = []string{"root"}, 0, 0
 	if from.ok() {
 		il.resume = il.byID[from.stack]
@@ -195,9 +199,80 @@ func (il *incLexer) lexRun(lines []string, from checkpoint, fn func(i int, spans
 		i++
 		return ok && i < len(lines)
 	}}
+	pos := il.resumeAt
 	for t := it(); t != chroma.EOF; t = it() {
+		if window {
+			if il.unfinished(t, pos) {
+				return errUnfinishedToken
+			}
+			pos += utf8.RuneCountInString(t.Value)
+		}
 		if !sp.push(t) {
 			return nil
+		}
+	}
+	return nil
+}
+
+func (il *incLexer) unfinished(t chroma.Token, pos int) bool {
+	switch RoleOf(t.Type) {
+	case RoleString, RoleEscape, RoleRegex, RoleComment:
+		return false
+	}
+	s := il.outer
+	if s == nil || pos >= len(s.Text) {
+		return false
+	}
+	suffix := tokenCloser(s.Text[pos:])
+	if len(suffix) == 0 {
+		return false
+	}
+	probe := make([]rune, len(s.Text), len(s.Text)+len(suffix))
+	copy(probe, s.Text)
+	probe = append(probe, suffix...)
+	// A closing-delimiter rule can fail at the opener, not at the window's last token.
+	for _, rule := range s.Rules[s.State] {
+		m, err := rule.Regexp.FindRunesMatchStartingAt(probe, pos)
+		if err != nil || m == nil || m.RuneIndex != pos {
+			continue
+		}
+		return pos+m.RuneLength > len(s.Text)
+	}
+	return false
+}
+
+func tokenCloser(text []rune) []rune {
+	switch text[0] {
+	case '`', '"', '\'':
+		return text[:1]
+	case '/':
+		if len(text) > 1 && text[1] == '*' {
+			return []rune("*/")
+		}
+	case '<':
+		if len(text) >= 4 && string(text[:4]) == "<!--" {
+			return []rune("-->")
+		}
+	case 'r':
+		i := 1
+		for i < len(text) && text[i] == '#' {
+			i++
+		}
+		if i < len(text) && text[i] == '"' {
+			return append([]rune{'"'}, text[1:i]...)
+		}
+	case 'R':
+		if len(text) < 2 || text[1] != '"' {
+			return nil
+		}
+		// C++ raw-string delimiters are at most 16 characters.
+		for i := 2; i < min(len(text), 19); i++ {
+			switch text[i] {
+			case '(':
+				return append(append([]rune{')'}, text[2:i]...), '"')
+			case ' ', '\\', ')', '\n', '\t':
+				return nil
+			}
 		}
 	}
 	return nil

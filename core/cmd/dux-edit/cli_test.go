@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -54,7 +55,7 @@ func TestOpenParamsReadPositions(t *testing.T) {
 		{"plus", []string{"+4:2", plain}, 0, []string{plain}, 4, 2},
 		{"plus beats suffix", []string{plain + ":9", "+4"}, 0, []string{plain}, 4, 0},
 		{"flag beats both", []string{"+4", plain + ":9"}, 2, []string{plain}, 2, 0},
-		{"only the first file", []string{plain, literal + ":8"}, 0, []string{plain, literal}, 0, 0},
+		{"later suffix leaves first position alone", []string{plain, literal + ":8"}, 0, []string{plain, literal}, 0, 0},
 		{"plus alone opens nothing", []string{"+4"}, 0, []string{}, 4, 0},
 	}
 	for _, tc := range cases {
@@ -65,6 +66,33 @@ func TestOpenParamsReadPositions(t *testing.T) {
 			assert.Equal(t, tc.paths, params["paths"])
 			assert.Equal(t, tc.line, params["line"])
 			assert.Equal(t, tc.column, params["column"])
+		})
+	}
+}
+
+func TestOpenParamsKeepEachFilePosition(t *testing.T) {
+	dir := t.TempDir()
+	first, second := filepath.Join(dir, "a"), filepath.Join(dir, "b")
+	t.Cleanup(func() { openFlags.line, openFlags.column = 0, 0 })
+	cases := []struct {
+		name         string
+		args         []string
+		line, column int
+		positions    string
+	}{
+		{"each suffix", []string{first + ":3", second + ":9:2"}, 0, 0, `[{"line":3,"column":0},{"line":9,"column":2}]`},
+		{"flag only overrides first", []string{first + ":3:8", second + ":9:2", "+7:4"}, 5, 6, `[{"line":5,"column":6},{"line":9,"column":2}]`},
+		{"plus only overrides first", []string{first + ":3:8", second + ":9:2", "+7:4"}, 0, 0, `[{"line":7,"column":4},{"line":9,"column":2}]`},
+		{"unpositioned first", []string{first, second + ":9"}, 0, 0, `[{"line":0,"column":0},{"line":9,"column":0}]`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			openFlags.line, openFlags.column = tc.line, tc.column
+			params, err := openParams(tc.args)
+			require.NoError(t, err)
+			positions, err := json.Marshal(params["positions"])
+			require.NoError(t, err)
+			assert.JSONEq(t, tc.positions, string(positions))
 		})
 	}
 }

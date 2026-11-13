@@ -85,7 +85,7 @@ func (h *harness) edit(t *testing.T, docID string, version int64, start, removed
 	require.True(t, ok)
 	length := 0
 	d.Read(func(b *buffer.Buffer, _ int64) { length = b.Len16() - removed + buffer.Len16(text) })
-	h.Edit(docID, version, start, removed, text, length)
+	h.Edit(docID, version, start, removed, text, length, nil)
 	require.Equal(t, version, d.Version())
 }
 
@@ -137,6 +137,186 @@ func TestMixedLineEndingsSurviveAnEdit(t *testing.T) {
 	data, err = os.ReadFile(path)
 	require.NoError(t, err)
 	assert.Equal(t, "a\nnew\nbX\nc\nd", string(data))
+}
+
+func TestMixedLineEndingsSurviveMultilineReplacement(t *testing.T) {
+	tests := []struct {
+		name   string
+		before string
+		prefix string
+		old    string
+		text   string
+		want   string
+	}{
+		{
+			name:   "sort",
+			before: "c\r\nb\na\rd\r\ne", old: "c\nb\na", text: "a\nb\nc",
+			want: "a\rb\nc\r\nd\r\ne",
+		},
+		{
+			name:   "duplicate lines keep occurrence order",
+			before: "dup\r\nx\ndup\ry\r\nz", old: "dup\nx\ndup", text: "dup\ndup\nx",
+			want: "dup\r\ndup\rx\ny\r\nz",
+		},
+		{
+			name:   "duplicate lines are transformed in place",
+			before: "dup\r\ndup\nx\rtail\r\nend", old: "dup\ndup\nx", text: "  dup\n  dup\n  x",
+			want: "  dup\r\n  dup\n  x\rtail\r\nend",
+		},
+		{
+			name:   "unchanged duplicate between transformed lines",
+			before: "dup\r\ndup\nx\rtail\r\nend", old: "dup\ndup\nx", text: "DUP!\ndup\nX!",
+			want: "DUP!\r\ndup\nX!\rtail\r\nend",
+		},
+		{
+			name:   "indent",
+			before: "c\r\nb\na\rd\r\ne", old: "c\nb\na", text: "  c\n  b\n  a",
+			want: "  c\r\n  b\n  a\rd\r\ne",
+		},
+		{
+			name:   "indent into another line's existing text",
+			before: "a\r\n  a\nz\rx\r\nend", old: "a\n  a\nz", text: "  a\n    a\n  z",
+			want: "  a\r\n    a\n  z\rx\r\nend",
+		},
+		{
+			name:   "case conversion into another line's existing text",
+			before: "a\r\nA\nb\rc\r\nd", old: "a\nA\nb", text: "A\nA\nB",
+			want: "A\r\nA\nB\rc\r\nd",
+		},
+		{
+			name:   "case-sensitive sort is not a conversion",
+			before: "A\r\na\nb\rc\r\nd", old: "A\na\nb", text: "a\nA\nb",
+			want: "a\nA\r\nb\rc\r\nd",
+		},
+		{
+			name:   "transformed and moved lines",
+			before: "c\r\nb\na\rd\r\ne", old: "c\nb\na", text: "b\nC\na",
+			want: "b\nC\r\na\rd\r\ne",
+		},
+		{
+			name:   "partial UTF-16 replacement",
+			before: "prefix😀c\r\nb\na\rtail", prefix: "prefix😀", old: "c\nb\na", text: "C\nB\nA",
+			want: "prefix😀C\r\nB\nA\rtail",
+		},
+		{
+			name:   "retained lines after deletion",
+			before: "c\r\nb\na\rd\r\ne", old: "c\nb\na", text: "b\na",
+			want: "b\na\rd\r\ne",
+		},
+		{
+			name:   "join beside retained lines",
+			before: "c\r\nb\na\rd\r\ne", old: "c\nb\na\nd", text: "c\nb a\nd",
+			want: "c\r\nb a\rd\r\ne",
+		},
+		{
+			name:   "move an unterminated last line",
+			before: "a\r\nb\nc\r\nd", old: "a\nb\nc\nd", text: "d\nb\nc\na",
+			want: "d\r\nb\nc\r\na",
+		},
+		{
+			name:   "sort preserves an unterminated EOF",
+			before: "d\r\nc\nb\r\na", old: "d\nc\nb\na", text: "a\nb\nc\nd",
+			want: "a\r\nb\r\nc\nd",
+		},
+		{
+			name:   "sort with trailing newline",
+			before: "c\r\nb\na\r\n", old: "c\nb\na\n", text: "a\nb\nc\n",
+			want: "a\r\nb\nc\r\n",
+		},
+		{
+			name:   "new lines use dominant ending",
+			before: "c\r\nb\na\rd\r\ne", old: "c\nb\na", text: "new\nb\nc\na",
+			want: "new\r\nb\nc\r\na\rd\r\ne",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h := newHarness(t, t.TempDir())
+			path := filepath.Join(t.TempDir(), "mixed.txt")
+			require.NoError(t, os.WriteFile(path, []byte(test.before), 0o644))
+			doc := h.open(t, OpenRequest{Path: path})
+			require.True(t, doc.MixedEOL)
+
+			h.edit(t, doc.DocID, 1, buffer.Len16(test.prefix), buffer.Len16(test.old), test.text)
+			require.IsType(t, SaveResult{}, h.save(SaveRequest{DocID: doc.DocID, Version: 1}))
+			data, err := os.ReadFile(path)
+			require.NoError(t, err)
+			assert.Equal(t, test.want, string(data))
+		})
+	}
+}
+
+func TestMixedLineEndingsSurviveUndoAndRedo(t *testing.T) {
+	type historyEdit struct {
+		start, removed int
+		text           string
+		steps          int
+		redo           bool
+		want           string
+	}
+	tests := []struct {
+		name  string
+		edits []historyEdit
+	}{
+		{
+			name: "join and redo branch",
+			edits: []historyEdit{
+				{0, 5, "c b a", 1, false, "c b a\rd\r\ne"},
+				{0, 5, "c\nb\na", 0, false, "c\r\nb\na\rd\r\ne"},
+				{0, 5, "c b a", 1, true, "c b a\rd\r\ne"},
+				{0, 5, "c\nb\na", 0, false, "c\r\nb\na\rd\r\ne"},
+				{0, 2, "", 1, false, "b\na\rd\r\ne"},
+				{0, 0, "c\n", 0, false, "c\r\nb\na\rd\r\ne"},
+				{0, 2, "", 1, true, "b\na\rd\r\ne"},
+			},
+		},
+		{
+			name: "merged newline typing",
+			edits: []historyEdit{
+				{2, 0, "\n", 1, false, "c\r\n\r\nb\na\rd\r\ne"},
+				{3, 0, "\n", 1, false, "c\r\n\r\n\r\nb\na\rd\r\ne"},
+				{2, 2, "", 0, false, "c\r\nb\na\rd\r\ne"},
+				{2, 0, "\n\n", 1, true, "c\r\n\r\n\r\nb\na\rd\r\ne"},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h := newHarness(t, t.TempDir())
+			path := filepath.Join(t.TempDir(), "mixed.txt")
+			require.NoError(t, os.WriteFile(path, []byte("c\r\nb\na\rd\r\ne"), 0o600))
+			doc := h.open(t, OpenRequest{Path: path})
+			text := doc.Text
+			for i, edit := range test.edits {
+				next := buffer.New(text)
+				_, err := next.Replace(edit.start, edit.removed, edit.text)
+				require.NoError(t, err)
+				version := int64(i + 1)
+				h.Edit(doc.DocID, version, edit.start, edit.removed, edit.text, next.Len16(),
+					&UndoState{Steps: edit.steps, Redo: edit.redo})
+				require.IsType(t, SaveResult{}, h.save(SaveRequest{DocID: doc.DocID, Version: version, MD5: qtMD5(next.Text())}))
+				data, err := os.ReadFile(path)
+				require.NoError(t, err)
+				assert.Equal(t, edit.want, string(data), "edit %d", i)
+				text = next.Text()
+			}
+		})
+	}
+}
+
+func TestMixedLineEndingsSurviveMultilineResetAndClose(t *testing.T) {
+	h := newHarness(t, t.TempDir())
+	path := filepath.Join(t.TempDir(), "mixed.txt")
+	require.NoError(t, os.WriteFile(path, []byte("c\r\nb\na\rd\r\ne"), 0o644))
+	doc := h.open(t, OpenRequest{Path: path})
+
+	require.Equal(t, map[string]any{"ok": true}, h.Reset(doc.DocID, 1, "a\nb\nc\nd\ne", false))
+	require.Equal(t, map[string]any{"ok": true}, h.close(CloseRequest{DocID: doc.DocID, Version: 1}))
+	restored := h.open(t, OpenRequest{Path: path, SwapID: doc.SwapID})
+	require.IsType(t, SaveResult{}, h.save(SaveRequest{DocID: restored.DocID}))
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	assert.Equal(t, "a\rb\nc\r\nd\r\ne", string(data))
 }
 
 func TestSaveChecksTheFileAndTheText(t *testing.T) {
@@ -343,7 +523,7 @@ func TestCloseRefusesAMirrorThatIsNotTheEditorsText(t *testing.T) {
 	h := newHarness(t, swapDir)
 	draft := h.open(t, OpenRequest{})
 	h.edit(t, draft.DocID, 1, 0, 0, "first ")
-	h.Edit(draft.DocID, 2, 99, 0, "second", 12)
+	h.Edit(draft.DocID, 2, 99, 0, "second", 12, nil)
 
 	sum := qtMD5("first second")
 	assert.Equal(t, Fail(CodeDesync, ""), h.close(CloseRequest{DocID: draft.DocID, Version: 2, MD5: sum}))
@@ -365,7 +545,7 @@ func TestCloseWaitsForTheEditsSentBeforeIt(t *testing.T) {
 	done := make(chan any, 1)
 	go func() { done <- h.close(CloseRequest{DocID: draft.DocID, Version: 1}) }()
 	time.Sleep(20 * time.Millisecond)
-	h.Edit(draft.DocID, 1, 0, 0, "late", 4)
+	h.Edit(draft.DocID, 1, 0, 0, "late", 4, nil)
 	require.Equal(t, map[string]any{"ok": true}, <-done)
 	text, err := os.ReadFile(filepath.Join(swapDir, draft.SwapID+".txt"))
 	require.NoError(t, err)
@@ -385,8 +565,8 @@ func TestResetKeepsTheEditsMadeAfterIt(t *testing.T) {
 		assert.Equal(t, int64(2), version)
 	})
 
-	h.Edit(draft.DocID, 3, 99, 0, "x", 4)
-	h.Edit(draft.DocID, 4, 4, 0, "e", 5)
+	h.Edit(draft.DocID, 3, 99, 0, "x", 4, nil)
+	h.Edit(draft.DocID, 4, 4, 0, "e", 5, nil)
 	h.Reset(draft.DocID, 3, "abcd", false)
 	d.Read(func(b *buffer.Buffer, version int64) {
 		assert.Equal(t, "abcde", b.Text())

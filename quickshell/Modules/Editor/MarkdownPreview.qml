@@ -8,8 +8,7 @@ import qs.DCommon.Widgets
 import qs.Services
 import "../../Common/SyntaxPalette.js" as SyntaxPalette
 
-// The rendered Markdown beside or instead of the editor. The core renders from its mirror; one request is
-// in flight at a time and a render that returns behind the document is followed by another.
+// Coalesce renders; request again if the document changed while one was in flight.
 Item {
     id: root
 
@@ -78,23 +77,6 @@ Item {
         message = I18n.tr("The preview is not available", "markdown preview, rendering failed");
     }
 
-    function resolve(relative) {
-        const parts = (directory + "/" + decodeURIComponent(relative)).split("/");
-        const out = [];
-        for (const part of parts) {
-            switch (part) {
-            case "":
-            case ".":
-                continue;
-            case "..":
-                out.pop();
-                continue;
-            }
-            out.push(part);
-        }
-        return "/" + out.join("/");
-    }
-
     function openLink(link) {
         if (link.startsWith("task:")) {
             // The line number is from the text that was rendered; after an edit it may name another task.
@@ -106,16 +88,7 @@ Item {
             Qt.openUrlExternally(link);
             return;
         }
-        const target = link.split("#")[0];
-        if (!/\.(md|markdown)$/i.test(target))
-            return;
-        if (target.startsWith("file://")) {
-            Documents.openPaths([decodeURIComponent(target.substring(7))], 0, 0);
-            return;
-        }
-        if (directory === "" || /^[a-z][a-z0-9+.-]*:/i.test(target))
-            return;
-        Documents.openPaths([target.startsWith("/") ? target : resolve(target)], 0, 0);
+        Documents.openMarkdownLink(link, directory);
     }
 
     function copy(text, done) {

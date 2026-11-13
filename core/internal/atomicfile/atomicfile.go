@@ -284,7 +284,7 @@ func copyBack(f, backup *os.File) error {
 
 func dropBackup(backup *os.File) {
 	backup.Close()
-	os.Remove(backup.Name())
+	_ = os.Remove(backup.Name())
 }
 
 func replace(target string, data []byte, mode os.FileMode, original os.FileInfo) error {
@@ -296,15 +296,15 @@ func replace(target string, data []byte, mode os.FileMode, original os.FileInfo)
 	name := tmp.Name()
 	if err := fill(tmp, data, mode, target, original); err != nil {
 		tmp.Close()
-		os.Remove(name)
+		_ = os.Remove(name)
 		return err
 	}
 	if err := tmp.Close(); err != nil {
-		os.Remove(name)
+		_ = os.Remove(name)
 		return err
 	}
 	if err := os.Rename(name, target); err != nil {
-		os.Remove(name)
+		_ = os.Remove(name)
 		return err
 	}
 	// The new file is in place by now; this error means the rename may not survive a crash.

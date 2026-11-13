@@ -56,6 +56,31 @@ func TestEditsReachTheMirrorInVersionOrder(t *testing.T) {
 	assert.Equal(t, "hello!?", text["text"])
 }
 
+func TestEditsRejectInvalidUndoMetadata(t *testing.T) {
+	b := startBackend(t)
+	opened := request(t, b, "doc.open", nil)
+	for _, metadata := range []map[string]any{
+		{"undoSteps": -1},
+		{"undoSteps": 1.5},
+		{"undoSteps": "1"},
+		{"undoSteps": nil},
+		{"undoSteps": 1, "redo": "yes"},
+		{"redo": true},
+	} {
+		params := map[string]any{
+			"docId": opened["docId"], "version": 1,
+			"start": 0, "removed": 0, "text": "invalid", "length": 7,
+		}
+		for key, value := range metadata {
+			params[key] = value
+		}
+		result := request(t, b, "doc.edit", params)
+		assert.Equal(t, "INVALID", result["code"], "%v", metadata)
+	}
+	text := request(t, b, "doc.text", map[string]any{"docId": opened["docId"]})
+	assert.Empty(t, text["text"])
+}
+
 func TestEveryRouteIsDescribed(t *testing.T) {
 	b := startBackend(t)
 	for _, spec := range Methods {

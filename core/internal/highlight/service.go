@@ -39,7 +39,7 @@ const (
 	saveRelexBytes = 256 << 10
 	// restartBack lines of context before an edit cover lookahead that reaches into the next lines.
 	restartBack = 8
-	// windowMargin lines past the target are lexed but not kept; chroma sees what follows the target.
+	// windowMargin is the initial lookahead; unfinished tokens can grow it without storing extra lines.
 	windowMargin = 512
 	firstChunk   = 512
 	maxChunk     = 16384
@@ -79,7 +79,6 @@ type LexerInfo struct {
 	Aliases []string `json:"aliases"`
 }
 
-// textDoc is what the service reads from a document.Doc; tests use a fake.
 type textDoc interface {
 	Read(fn func(b *buffer.Buffer, version int64))
 	Path() string
@@ -449,7 +448,6 @@ func (s *Service) needsWork(ds *docState) bool {
 	return ds.pending < len(ds.lines) && ds.target() > 0
 }
 
-// target is how many lines from the top the view and the waiting Lines calls need.
 func (ds *docState) target() int {
 	t := ds.viewLast + 1
 	for _, w := range ds.waiters {
@@ -583,7 +581,6 @@ func (ds *docState) resetLines() {
 	ds.md, ds.spec = nil, specLines{}
 }
 
-// measure fills the metrics of lines changed since the last call.
 func (ds *docState) measure(b *buffer.Buffer) {
 	for i := ds.unknownLo; i < min(ds.unknownHi, len(ds.meta)); i++ {
 		ds.forget(ds.meta[i])
@@ -829,7 +826,7 @@ func (s *Service) lexSpec(ds *docState, first, last int) bool {
 	s.flush()
 
 	out := make([][]span, 0, last-first)
-	_ = il.lexRun(text, noCheckpoint, func(i int, spans []span, _ mark) bool {
+	_ = il.lexRun(text, noCheckpoint, false, func(i int, spans []span, _ mark) bool {
 		if ds.gen.Load() != gen {
 			return false
 		}
@@ -870,63 +867,78 @@ func (s *Service) lexRange(ds *docState, target int) bool {
 	old := make([]lineState, target-c)
 	copy(old, ds.lines[c:target])
 	pending, lexedTo, gen, signals, il := ds.pending, ds.lexedTo, ds.gen.Load(), s.signals.Load(), ds.il
-	s.mu.Unlock()
-	s.flush()
+	canGrow := ds.withinCaps()
+	for {
+		window := canGrow && end < len(ds.lines)
+		s.mu.Unlock()
+		s.flush()
 
-	var out []lexed
-	converged := -1
-	err := il.lexRun(text, from, func(i int, spans []span, m mark) bool {
-		if ds.gen.Load() != gen {
-			return false
-		}
-		line := c + i
-		ck := toCheckpoint(text[i], m)
-		if i == 0 && from.ok() {
-			spans, ck = merge(append(clip(old[0].spans, from.col16), spans...)), from
-		}
-		out = append(out, lexed{spans: spans, ck: ck})
-		if line >= pending && line < lexedTo && !old[i].dirty && old[i].ck.ok() && old[i].ck == ck {
-			converged = line
-			return false
-		}
-		if line >= pending && s.signals.Load() != signals {
-			return false
-		}
-		return line+1 < target
-	})
+		var out []lexed
+		converged := -1
+		err := il.lexRun(text, from, window, func(i int, spans []span, m mark) bool {
+			if ds.gen.Load() != gen {
+				return false
+			}
+			line := c + i
+			ck := toCheckpoint(text[i], m)
+			if i == 0 && from.ok() {
+				spans, ck = merge(append(clip(old[0].spans, from.col16), spans...)), from
+			}
+			out = append(out, lexed{spans: spans, ck: ck})
+			if line >= pending && line < lexedTo && !old[i].dirty && old[i].ck.ok() && old[i].ck == ck {
+				converged = line
+				return false
+			}
+			if line >= pending && s.signals.Load() != signals {
+				return false
+			}
+			return line+1 < target
+		})
 
-	s.mu.Lock()
-	if ds.gen.Load() != gen || s.docs[ds.id] != ds {
-		return false
-	}
-	if err != nil {
-		ds.failed = true
-		s.retier(ds)
-		return false
-	}
-	ds.store(c, out)
-	last := c + len(out)
-	if converged < 0 && last <= pending {
-		// chroma ended the stream early; never loop on a document that makes no progress.
-		ds.failed = true
-		s.retier(ds)
-		return false
-	}
-	if converged < 0 {
-		if last < ds.lexedTo {
-			ds.lines[last].seam = true
+		s.mu.Lock()
+		if ds.gen.Load() != gen || s.docs[ds.id] != ds {
+			return false
 		}
-		ds.pending, ds.lexedTo = last, max(ds.lexedTo, last)
+		if errors.Is(err, errUnfinishedToken) {
+			if s.signals.Load() != signals {
+				return true
+			}
+			end = min(len(ds.lines), c+(end-c)*2)
+			text, ok = s.snapshot(ds, c, end)
+			if !ok {
+				return false
+			}
+			continue
+		}
+		if err != nil {
+			ds.failed = true
+			s.retier(ds)
+			return false
+		}
+		ds.store(c, out)
+		last := c + len(out)
+		if converged < 0 && last <= pending {
+			// chroma ended the stream early; never loop on a document that makes no progress.
+			ds.failed = true
+			s.retier(ds)
+			return false
+		}
+		if converged < 0 {
+			if last < ds.lexedTo {
+				ds.lines[last].seam = true
+			}
+			ds.pending, ds.lexedTo = last, max(ds.lexedTo, last)
+			return true
+		}
+		ds.pending = ds.lexedTo
+		for i := converged + 1; i < ds.lexedTo; i++ {
+			if ds.lines[i].dirty || ds.lines[i].seam {
+				ds.pending = i
+				break
+			}
+		}
 		return true
 	}
-	ds.pending = ds.lexedTo
-	for i := converged + 1; i < ds.lexedTo; i++ {
-		if ds.lines[i].dirty || ds.lines[i].seam {
-			ds.pending = i
-			break
-		}
-	}
-	return true
 }
 
 // lexFull re-lexes the whole document from the top: the backstop for lookahead the checkpoints cannot see.
@@ -950,7 +962,7 @@ func (s *Service) lexFull(ds *docState) bool {
 
 	out := make([]lexed, 0, len(text))
 	yielded := false
-	err := il.lexRun(text, from, func(i int, spans []span, m mark) bool {
+	err := il.lexRun(text, from, false, func(i int, spans []span, m mark) bool {
 		if ds.gen.Load() != gen {
 			return false
 		}
@@ -1063,7 +1075,6 @@ func lexWhole(lexer chroma.Lexer, lines []string) (out [][]span, err error) {
 	return out, nil
 }
 
-// publishView sends the view lines whose spans changed since they were last sent.
 func (s *Service) publishView(ds *docState) {
 	ds.viewDirty = false
 	if ds.state.Tier != TierExact {
@@ -1104,7 +1115,6 @@ func (s *Service) publishView(ds *docState) {
 	flush()
 }
 
-// answer replies to the Lines calls the current state can serve.
 func (s *Service) answer(ds *docState) {
 	ds.waiters = slices.DeleteFunc(ds.waiters, func(w *waiter) bool {
 		n := len(ds.meta)

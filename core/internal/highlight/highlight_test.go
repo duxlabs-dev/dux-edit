@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand/v2"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -266,6 +267,112 @@ func TestColumnsCountUTF16Units(t *testing.T) {
 	require.Len(t, got, 1)
 	assert.Contains(t, got[0].Spans, Span{Col: 5, Len: 4, Role: RoleString})
 	assert.Contains(t, got[0].Spans, Span{Col: 12, Len: 2, Role: RoleNumber})
+}
+
+func TestIncrementalWindowIncludesLongRawString(t *testing.T) {
+	for _, tc := range []struct {
+		name, path, prefix, closer string
+	}{
+		{"go", "a.go", "package main\nvar raw = `\n", "`"},
+		{"unfinished", "a.go", "package main\nvar raw = `\n", ""},
+		{"c++", "a.cpp", "int main() {\nauto raw = R\"tag(\n", ")tag\";"},
+		{"rust", "a.rs", "fn main() {\nlet raw = r###\"\n", "\"###;"},
+		{"comment", "a.go", "package main\n/*\n", "*/"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h := newHarness(t)
+			src := tc.prefix + strings.Repeat("raw string body 😀\n", windowMargin*3) +
+				tc.closer + "\nvar after = 42\n" + strings.Repeat("var tail = 1\n", windowMargin*8)
+			d := h.open("d", filepath.Join(t.TempDir(), tc.path), src)
+			lexer := Match(tc.path)
+			want := reference(t, lexer, src)
+			got, version := h.lines("d", 0, 12)
+			require.Equal(t, int64(0), version)
+			require.Equal(t, want[:12], spansOf(got))
+			h.s.mu.Lock()
+			lexedTo := h.s.docs["d"].lexedTo
+			h.s.mu.Unlock()
+			require.Equal(t, 12, lexedTo, "lookahead must not store the rest of the file")
+
+			h.edit("d", d, buffer.Len16(tc.prefix), 3, "changed")
+			got, version = h.lines("d", 0, 12)
+			require.Equal(t, int64(1), version)
+			want = reference(t, lexer, d.text())
+			require.Equal(t, want[:12], spansOf(got))
+			first := windowMargin * 3
+			got, _ = h.lines("d", first, first+8)
+			require.Equal(t, want[first:first+8], spansOf(got))
+		})
+	}
+}
+
+func prepareWindowTest(t *testing.T, src string) (*Service, *docState, *fakeDoc) {
+	t.Helper()
+	s := New(nil, func(string, any) {})
+	t.Cleanup(s.Close)
+	d := &fakeDoc{buf: buffer.New(src), path: filepath.Join(t.TempDir(), "a.go")}
+	ds := &docState{id: "d", doc: d, fresh: true, redetect: true, viewLast: -1}
+	s.docs[ds.id] = ds
+	s.mu.Lock()
+	ok := s.settle(ds)
+	il := s.incLexer(ds)
+	s.mu.Unlock()
+	require.True(t, ok)
+	require.NotNil(t, il)
+	return s, ds, d
+}
+
+func TestIncrementalWindowKeepsUnrelatedErrorsBounded(t *testing.T) {
+	src := "package main\nvar bad = @\n" + strings.Repeat("var tail = 1\n", windowMargin*8)
+	s, ds, d := prepareWindowTest(t, src)
+	reads := 0
+	hook := func() { reads++ }
+	d.afterRead.Store(&hook)
+	s.mu.Lock()
+	ok := s.lexRange(ds, 12)
+	s.mu.Unlock()
+	require.True(t, ok)
+	require.Equal(t, 1, reads, "ordinary syntax errors must not grow the snapshot")
+}
+
+func TestIncrementalWindowDropsCanceledExtension(t *testing.T) {
+	src := "package main\nvar raw = `\n" + strings.Repeat("body\n", windowMargin*3) + "`\n"
+	s, ds, d := prepareWindowTest(t, src)
+	reads := 0
+	hook := func() {
+		reads++
+		if reads == 2 {
+			d.replace(t, 0, 0, "// newer\n")
+			ds.gen.Add(1)
+		}
+	}
+	d.afterRead.Store(&hook)
+	s.mu.Lock()
+	ok := s.lexRange(ds, 12)
+	s.mu.Unlock()
+	require.False(t, ok)
+	require.Equal(t, 0, ds.lexedTo, "a canceled extension must not store partial spans")
+	require.False(t, ds.failed)
+}
+
+func TestIncrementalWindowYieldsForAnotherRequest(t *testing.T) {
+	src := "package main\nvar raw = `\n" + strings.Repeat("body\n", windowMargin*3) + "`\n"
+	s, ds, d := prepareWindowTest(t, src)
+	reads := 0
+	hook := func() {
+		reads++
+		if reads == 2 {
+			s.signals.Add(1)
+		}
+	}
+	d.afterRead.Store(&hook)
+	s.mu.Lock()
+	ok := s.lexRange(ds, 12)
+	s.mu.Unlock()
+	require.True(t, ok)
+	require.Equal(t, 2, reads)
+	require.Equal(t, 1, ds.lexedTo, "completed lines should survive yielding to another request")
+	require.False(t, ds.failed)
 }
 
 func TestDetectionOrder(t *testing.T) {

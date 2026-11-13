@@ -2,6 +2,7 @@ package backend
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/duxlabs-dev/dux-edit/core/internal/buffer"
@@ -12,8 +13,7 @@ import (
 // How long a request tagged with a version waits for the edits before it to arrive.
 const awaitEdits = 2 * time.Second
 
-// withText hands fn the text once the mirror has reached the version the request names. The copy is taken
-// under the read lock and fn runs without it, so a long scan or render never holds up edits or the lexer.
+// Copy under the lock; run fn after unlocking so slow readers do not block edits.
 func (b *Backend) withText(ctx context.Context, p map[string]any, fn func(text string, version int64) any) any {
 	return b.withTextUnless(ctx, p, nil, fn)
 }
@@ -49,6 +49,22 @@ func (b *Backend) docOpen(_ context.Context, p map[string]any) any {
 }
 
 func (b *Backend) docEdit(_ context.Context, p map[string]any) any {
+	var undo *document.UndoState
+	if value, exists := p["undoSteps"]; exists {
+		var steps int
+		encoded, err := json.Marshal(value)
+		if value == nil || err != nil || json.Unmarshal(encoded, &steps) != nil || steps < 0 {
+			return fail("INVALID", "undoSteps must be a nonnegative integer")
+		}
+		undo = &document.UndoState{Steps: steps}
+	}
+	if value, exists := p["redo"]; exists {
+		redo, valid := value.(bool)
+		if !valid || undo == nil {
+			return fail("INVALID", "redo must be a boolean with undoSteps")
+		}
+		undo.Redo = redo
+	}
 	b.docs.Edit(
 		params.StringOpt(p, "docId", ""),
 		int64(params.IntOpt(p, "version", 0)),
@@ -56,6 +72,7 @@ func (b *Backend) docEdit(_ context.Context, p map[string]any) any {
 		params.IntOpt(p, "removed", 0),
 		params.StringOpt(p, "text", ""),
 		params.IntOpt(p, "length", 0),
+		undo,
 	)
 	return ok()
 }

@@ -10,10 +10,10 @@ import qs.Services
 import "../../Common/EditTracker.js" as EditTracker
 import "../../Common/LineIndex.js" as LineIndex
 import "../../Common/TextOps.js" as TextOps
+import "../../Common/BracketMatch.js" as BracketMatch
 import "../../DCommon/Common/Contrast.js" as Contrast
 
-// The editing surface of one tab: plain-text editor with syntax, spelling and match formats, visible-lines
-// gutter, find bar and Markdown preview. The shell keeps one pane per loaded tab and reaches it through doc.editor.
+// One loaded tab's editing surface, exposed through doc.editor.
 Item {
     id: root
 
@@ -25,10 +25,12 @@ Item {
     readonly property int selectionStart: textEdit.selectionStart
     readonly property int selectionEnd: textEdit.selectionEnd
     readonly property bool overwrite: textEdit.overwriteMode
+    property bool redoing: false
 
     readonly property bool shown: visible
     readonly property bool simple: Documents.simple
     readonly property string lexer: root.doc.lexer
+    readonly property string tier: root.doc.tier
     readonly property bool markdown: root.doc.isMarkdown
     readonly property bool prose: EditorMetrics.proseLexers.includes(lexer.toLowerCase())
     // "auto" leaves large text unwrapped: wrapped, every width change lays the whole document out again.
@@ -71,15 +73,13 @@ Item {
         }
     ])
     readonly property int bracketRole: palette.length - 1
-    readonly property int bracketBudget: 20000
     readonly property color matchColor: Contrast.mix(Style.surface, Style.primary, Style.primarySelected.a)
 
     readonly property bool lineHighlightOn: SettingsData.highlightCurrentLine
     property real lineHighlightY: 0
     property real lineHighlightHeight: 0
 
-    // Built lines around the viewport, line L in slot L % slots.length: {line, y, height}. Delegates keep
-    // their slot while scrolling, so only lines entering the range are laid out again.
+    // Slots are indexed by line % capacity so scrolling reuses delegates.
     property var slots: []
     property int currentLine: 0
 
@@ -101,6 +101,9 @@ Item {
             "brackets": new Map(),
             "bracketLines": new Set()
         })
+    readonly property var bracketMatcher: BracketMatch.create(
+        (params, done) => Backend.call("doc.matchBracket", params, done),
+        pair => root.applyBrackets(pair))
 
     // The text exactly as the core mirrors it, up to the NBSP and line separator normalization of TextEdit.
     function getText() {
@@ -125,7 +128,7 @@ Item {
         replaceRange(textEdit.selectionStart, textEdit.selectionEnd, text);
     }
 
-    // The common ends are kept, so a pure insert or delete is one undo step. Compared with the stored text, not the mirror's.
+    // Trim unchanged stored text, not Qt's normalized mirror.
     function replaceRange(start, end, text) {
         const change = EditTracker.diff(decorations.text(start, end), text);
         if (!change)
@@ -134,15 +137,7 @@ Item {
     }
 
     function edit(start, removed, text) {
-        // A runtime with TextDecorations.replace makes a replacement one undo step and one delta.
-        if (removed > 0 && text.length > 0 && typeof decorations.replace === "function") {
-            decorations.replace(start, start + removed, text);
-            return;
-        }
-        if (removed > 0)
-            textEdit.remove(start, start + removed);
-        if (text.length > 0)
-            textEdit.insert(start, text);
+        decorations.replace(start, start + removed, text);
     }
 
     function editable() {
@@ -358,6 +353,19 @@ Item {
                 return;
             joinLines();
             break;
+        case Qt.Key_Z:
+            if (mods === Qt.ControlModifier)
+                undo();
+            else if (mods === (Qt.ControlModifier | Qt.ShiftModifier))
+                redo();
+            else
+                return;
+            break;
+        case Qt.Key_Y:
+            if (mods !== Qt.ControlModifier)
+                return;
+            redo();
+            break;
         case Qt.Key_Escape:
             if (!findOpen)
                 return;
@@ -369,7 +377,6 @@ Item {
         event.accepted = true;
     }
 
-    // True when the key was used.
     function tabPressed(back, plain) {
         if (!plain || !editable())
             return false;
@@ -432,7 +439,9 @@ Item {
     }
 
     function redo() {
+        redoing = true;
         textEdit.redo();
+        redoing = false;
     }
 
     function selectAll() {
@@ -496,6 +505,7 @@ Item {
         mirror.decorated.clear();
         mirror.brackets = new Map();
         mirror.bracketLines.clear();
+        bracketMatcher.update(null);
         Highlight.forget(mirror.docId);
         Spell.forget(mirror.docId);
         mirror.pairs = surrogatePairs(text);
@@ -533,8 +543,8 @@ Item {
             "removed": removed,
             "text": decorations.text(position, position + added)
         }, textEdit.length);
-        mirror.brackets = new Map();
         shiftDecorated(lines);
+        bracketMatcher.update(null);
         Qt.callLater(root.updateCursor);
         // Unwrapped, an edit that keeps the line count moves no line, so the gutter stays as built.
         if (lines.oldLines === lines.newLines && !wrapping) {
@@ -578,7 +588,7 @@ Item {
         mirror.pairs += surrogatePairs(change.text) - removedPairs;
         const lines = mirror.index.applyEdit(change.start, change.removed, shown);
         const doc = root.doc;
-        doc.edited(change.start, change.removed, change.text, length);
+        doc.edited(change.start, change.removed, change.text, length, decorations.undoSteps(), redoing);
         Highlight.linesEdited(mirror.docId, doc.version, lines);
         Spell.linesEdited(mirror.docId, doc.version, lines);
         if (shown !== change.text)
@@ -624,9 +634,28 @@ Item {
     }
 
     function updateBrackets() {
+        if (mirror.loading || !shown || hasSeparators || mirror.builtLast < 0 || !mirror.docId) {
+            bracketMatcher.update(null);
+            return;
+        }
+        const offset = textEdit.cursorPosition;
+        const near = mirror.index.text(Math.max(0, offset - 1), Math.min(mirror.index.length, offset + 1));
+        if (!/[()[\]{}]/.test(near)) {
+            bracketMatcher.update(null);
+            return;
+        }
+        bracketMatcher.update({
+            "docId": mirror.docId,
+            "version": root.doc.version,
+            "offset": offset,
+            "first": mirror.builtFirst,
+            "last": mirror.builtLast
+        }, lexer + ":" + tier);
+    }
+
+    function applyBrackets(pair) {
         const index = mirror.index;
         const next = new Map();
-        const pair = hasSeparators || mirror.builtLast < 0 ? null : TextOps.matchBracket(index, textEdit.cursorPosition, mirror.builtFirst, mirror.builtLast, bracketBudget);
         for (const offset of pair ?? []) {
             const line = index.lineAt(offset);
             const spans = next.get(line) ?? [];
@@ -681,8 +710,7 @@ Item {
         Spell.view(root.doc, mirror.sentFirst, mirror.sentLast, line, column);
     }
 
-    // The line whose first row starts at or above y. A binary search over positionToRectangle: positionAt
-    // walks the blocks and costs about 6 ms on 2 MB after every edit.
+    // Find the line above y without positionAt's document-wide block walk.
     function visibleLine(y) {
         const index = mirror.index;
         const target = y - textEdit.y;
@@ -787,7 +815,6 @@ Item {
         };
     }
 
-    // True when any format changed.
     function decorate() {
         if (mirror.builtLast < 0)
             return false;
@@ -897,7 +924,10 @@ Item {
         slots = [];
         mirror.builtLast = -1;
         mirror.decorated.clear();
+        bracketMatcher.update(null);
     }
+    onLexerChanged: updateBrackets()
+    onTierChanged: updateBrackets()
     onDecoratedChanged: restyle()
     onHighlightOnChanged: restyle()
     onSpellOnChanged: resendViews()
@@ -911,6 +941,7 @@ Item {
 
     Component.onCompleted: root.doc.editor = root
     Component.onDestruction: {
+        bracketMatcher.stop();
         Highlight.forget(mirror.docId);
         Spell.forget(mirror.docId);
         if (root.doc && root.doc.editor === root)
@@ -1054,7 +1085,7 @@ Item {
                 id: textEdit
 
                 x: root.centered ? Math.round((flickable.width - width) / 2) : 0
-                // A width change lays the whole document out again (about 1 s on 2 MB), so unwrapped it grows a screen at a time.
+                // Grow unwrapped text a screen at a time to avoid relayout on every width change.
                 width: root.wrapping ? (root.centered ? root.proseWidth : root.wrapWidth) : Math.ceil((contentWidth + leftPadding + rightPadding + 1) / root.screenWidth) * root.screenWidth
                 height: Math.max(implicitHeight, flickable.height)
                 padding: root.padding

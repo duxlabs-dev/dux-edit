@@ -18,3 +18,13 @@ export function load(file, base = import.meta.url) {
     vm.runInContext(source.replace(/^\.(pragma|import).*$/gm, ""), context);
     return context;
 }
+
+// Runs singleton functions with injected properties and services, without creating UI components.
+export function loadSingleton(file, scope, base = import.meta.url) {
+    const source = readFileSync(new URL(file, base), "utf8");
+    const context = vm.createContext(scope);
+    context.root = context;
+    const functions = source.match(/^    function [\s\S]*?^    }/gm) || [];
+    vm.runInContext(functions.join("\n"), context);
+    return context;
+}

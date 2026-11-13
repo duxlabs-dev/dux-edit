@@ -7,7 +7,6 @@ import qs.Common
 import qs.Modules.Editor
 import qs.Services
 
-// The tab list and every flow that can prompt: open, close, save, autosave, session restore and recovery.
 Singleton {
     id: root
 
@@ -22,7 +21,6 @@ Singleton {
     // Mirrors `tabs` as {tabId} rows so views keep their delegates, and the editors in them, across tab changes.
     readonly property ListModel tabModel: ListModel {}
 
-    // The shell shows a prompt for these and calls back into closeTab/confirmLargeFile.
     signal closeConfirmationNeeded(var doc)
     signal largeFileConfirmationNeeded(var doc, real size)
     // Any other question: {title, message, actions: [{label, run, danger}], cancelLabel, cancel}
@@ -162,9 +160,9 @@ Singleton {
         return doc.isDraft && doc.loaded && !doc.dirty && doc.charCount === 0 ? doc : null;
     }
 
-    // line and column are 1-based and apply to the first path.
-    // mustExist: a path from a list of past files, which opens nothing when the file is gone.
-    function openPaths(paths, line, column, mustExist) {
+    // positions follows paths; line and column are the legacy first-path fallback (all 1-based).
+    // mustExist refuses missing paths from past files or Markdown links.
+    function openPaths(paths, line, column, mustExist, positions) {
         // Held until the session is back, so restored tabs keep their order and the request ends up current.
         if (!resumed || !restored) {
             pendingOpens = pendingOpens.concat([
@@ -172,7 +170,8 @@ Singleton {
                     "paths": paths,
                     "line": line,
                     "column": column,
-                    "mustExist": mustExist === true
+                    "mustExist": mustExist === true,
+                    "positions": positions
                 }
             ]);
             return;
@@ -183,7 +182,8 @@ Singleton {
         }
         const placeholder = pristineDraft();
         let first = -1;
-        for (const path of paths) {
+        for (let i = 0; i < paths.length; i++) {
+            const path = paths[i];
             let index = indexOfPath(path);
             if (index < 0) {
                 addTab({
@@ -195,21 +195,54 @@ Singleton {
             }
             if (first < 0)
                 first = index;
+            const doc = tabs[index];
+            const position = positions?.[i];
+            if (i > 0 && !(position?.line > 0))
+                continue;
+            doc.pendingLine = position?.line || (i === 0 ? line || 0 : 0);
+            doc.pendingColumn = position?.column || (i === 0 ? column || 0 : 0);
+            if (doc.loaded && doc.editor && doc.pendingLine > 0) {
+                doc.editor.gotoLine(doc.pendingLine, doc.pendingColumn);
+                doc.pendingLine = 0;
+                doc.pendingColumn = 0;
+            }
         }
         const doc = tabs[first];
-        doc.pendingLine = line || 0;
-        doc.pendingColumn = column || 0;
-        if (doc.loaded && doc.editor && doc.pendingLine > 0) {
-            doc.editor.gotoLine(doc.pendingLine, doc.pendingColumn);
-            doc.pendingLine = 0;
-            doc.pendingColumn = 0;
-        }
         activate(first);
         if (placeholder && placeholder !== doc)
             closeTab(tabs.indexOf(placeholder), true);
     }
 
-    // then runs once the document is in.
+    function openMarkdownLink(link, directory) {
+        const target = link.split("#")[0];
+        if (!/\.(md|markdown)$/i.test(target))
+            return;
+        if (target.startsWith("file://")) {
+            openPaths([decodeURIComponent(target.substring(7))], 0, 0, true);
+            return;
+        }
+        if (directory === "" || /^[a-z][a-z0-9+.-]*:/i.test(target))
+            return;
+        openPaths([target.startsWith("/") ? target : resolveMarkdownPath(target, directory)], 0, 0, true);
+    }
+
+    function resolveMarkdownPath(relative, directory) {
+        const parts = (directory + "/" + decodeURIComponent(relative)).split("/");
+        const out = [];
+        for (const part of parts) {
+            switch (part) {
+            case "":
+            case ".":
+                continue;
+            case "..":
+                out.pop();
+                continue;
+            }
+            out.push(part);
+        }
+        return "/" + out.join("/");
+    }
+
     function load(doc, options, then) {
         doc.load(options, result => root.handleOpen(doc, options, result, then));
     }
@@ -772,14 +805,12 @@ Singleton {
                     "previewMode": doc.previewMode,
                     "lexer": doc.lexerOverride,
                     "wrap": doc.wrapOverride,
-                    "dirty": doc.dirty,
                     "existed": doc.existed
                 }));
         SessionData.currentIndex = currentIndex;
     }
 
-    // A hidden window holds no editors. Dirty documents keep their swap; one without a swap stays open in
-    // core so its edits are there when the tab is shown again. done hears whether the text is safe.
+    // Hidden editors release into swap; unswappable documents stay in core. done reports safety.
     function unload(doc, saveFirst, done) {
         doc.pendingCursor = doc.cursorPosition;
         if (doc.dirty && !doc.recoverable) {
@@ -870,7 +901,7 @@ Singleton {
             if (request.imported)
                 applyImport(request.imported);
             else
-                openPaths(request.paths, request.line, request.column, request.mustExist);
+                openPaths(request.paths, request.line, request.column, request.mustExist, request.positions);
         }
         if (tabs.length === 0)
             newDraft();
@@ -892,7 +923,7 @@ Singleton {
                 "previewChosen": !!entry.previewMode,
                 "lexerOverride": entry.lexer || "",
                 "wrapOverride": typeof entry.wrap === "string" ? entry.wrap : "",
-                "recoveredDirty": entry.dirty === true && !!entry.swapId,
+                "recoveryPending": true,
                 "existed": entry.existed === true
             });
         }
@@ -905,6 +936,18 @@ Singleton {
 
     function offerRecovery() {
         Backend.call("recovery.list", null, result => {
+            if (!result.ok)
+                return;
+            const recovered = {};
+            for (const item of result.items || [])
+                recovered[item.swapId] = true;
+            for (const doc of root.tabs) {
+                // A document opened since this request owns its dirty state, even after unloading.
+                if (!doc.recoveryPending || doc.loaded || doc.loading || doc.held || doc.closing)
+                    continue;
+                doc.recoveredDirty = recovered[doc.swapId] === true;
+                doc.recoveryPending = false;
+            }
             const known = root.tabs.map(doc => doc.swapId).filter(id => id !== "");
             const items = (result.items || []).filter(item => !known.includes(item.swapId));
             if (items.length === 0)

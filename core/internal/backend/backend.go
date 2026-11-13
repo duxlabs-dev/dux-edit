@@ -103,11 +103,10 @@ func (b *Backend) takeOpenEnv() {
 	if raw == "" {
 		return
 	}
-	os.Unsetenv(OpenEnv)
+	_ = os.Unsetenv(OpenEnv)
 	var payload map[string]any
 	if json.Unmarshal([]byte(raw), &payload) != nil {
 		return
 	}
-	payload["action"] = "open"
-	b.pending.Deliver(b.bus, payload)
+	b.uiOpen(context.Background(), payload)
 }

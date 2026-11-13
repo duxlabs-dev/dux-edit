@@ -115,7 +115,7 @@ ShellRoot {
             if (request.simple)
                 Documents.simpleOverride = true;
             root.showWindow();
-            Documents.openPaths(request.paths, request.line, request.column);
+            Documents.openPaths(request.paths, request.line, request.column, false, request.positions);
         }
         function onImportRequested(result) {
             root.showWindow();

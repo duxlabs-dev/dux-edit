@@ -49,24 +49,6 @@ test("words are counted per line", () => {
     assert.equal(ops.countWords([""]), 0);
 });
 
-test("brackets match across lines and nesting inside the window", () => {
-    const text = "f(a[1], {\n  b: (c)\n})";
-    const index = create(text);
-    const open = text.indexOf("(");
-    const close = text.lastIndexOf(")");
-    assert.deepEqual([...ops.matchBracket(index, open + 1, 0, 2, 1000)], [open, close]);
-    assert.deepEqual([...ops.matchBracket(index, close + 1, 0, 2, 1000)], [close, open]);
-    assert.deepEqual([...ops.matchBracket(index, close, 0, 2, 1000)], [close - 1, text.indexOf("{")]);
-    assert.deepEqual([...ops.matchBracket(index, open, 0, 2, 1000)], [open, close]);
-    const brace = text.indexOf("{");
-    assert.deepEqual([...ops.matchBracket(index, brace, 0, 2, 1000)], [brace, text.indexOf("}")]);
-    assert.equal(ops.matchBracket(index, text.indexOf("b"), 0, 2, 1000), null);
-    assert.equal(ops.matchBracket(index, open + 1, 0, 1, 1000), null);
-    assert.equal(ops.matchBracket(index, open + 1, 0, 2, 5), null);
-    assert.equal(ops.matchBracket(index, close, 0, 1, 1000), null);
-    assert.equal(ops.matchBracket(create("(("), 1, 0, 0, 1000), null);
-});
-
 // Runs a plan on `text` with the selection written as "[" (anchor) and "|" (cursor), or "|" alone.
 function run(make, marked) {
     const anchorAt = marked.indexOf("[");

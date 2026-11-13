@@ -44,8 +44,7 @@ type Store struct {
 	nextID    int
 	swapDir   swap.Dir
 	watcher   *watch.Watcher
-	// parked holds the locks of swaps whose documents closed with unsaved edits, so no other instance
-	// offers them for recovery while this one is only hidden.
+	// Keep closed dirty swaps locked while hidden so other instances cannot recover them.
 	parked map[string]*swap.Lock
 }
 
@@ -118,11 +117,14 @@ type Doc struct {
 	desynced bool
 	gapTimer *time.Timer
 
-	path     string
-	title    string
-	info     textcodec.Info
-	ends     []textcodec.EOL
-	identity string
+	path      string
+	title     string
+	info      textcodec.Info
+	ends      []textcodec.EOL
+	endUndo   []endUndo
+	endCursor int
+	undoSteps int
+	identity  string
 	// reported is the on-disk identity the UI last heard about, so one change is published once.
 	reported  string
 	elevated  bool
@@ -147,6 +149,12 @@ type Doc struct {
 type edit struct {
 	start, removed, length int
 	text                   string
+	undo                   *UndoState
+}
+
+type UndoState struct {
+	Steps int
+	Redo  bool
 }
 
 func (d *Doc) Path() string {
@@ -170,8 +178,7 @@ func (d *Doc) Read(fn func(b *buffer.Buffer, version int64)) {
 
 var ErrBehind = errors.New("mirror did not reach the requested version")
 
-// Await blocks until the mirror is at version or later. Requests race on the socket, so a read tagged
-// with version N can arrive before edit N.
+// Await waits for version; requests can arrive before the edits they reference.
 func (d *Doc) Await(ctx context.Context, version int64) error {
 	for {
 		d.mu.RLock()
@@ -347,7 +354,7 @@ func (s *Store) Open(req OpenRequest) any {
 }
 
 // Edit applies edits in version order and parks the ones that arrive early.
-func (s *Store) Edit(docID string, version int64, start, removed int, text string, length int) {
+func (s *Store) Edit(docID string, version int64, start, removed int, text string, length int, undo *UndoState) {
 	d, ok := s.Get(docID)
 	if !ok {
 		return
@@ -357,7 +364,7 @@ func (s *Store) Edit(docID string, version int64, start, removed int, text strin
 		d.mu.Unlock()
 		return
 	}
-	d.pending[version] = edit{start: start, removed: removed, text: text, length: length}
+	d.pending[version] = edit{start: start, removed: removed, text: text, length: length, undo: undo}
 	if d.desynced {
 		d.mu.Unlock()
 		return
@@ -373,7 +380,6 @@ func (s *Store) Edit(docID string, version int64, start, removed int, text strin
 	}
 }
 
-// applyPendingLocked applies the parked edits that follow the mirror's version.
 func (s *Store) applyPendingLocked(d *Doc) (desync, drain bool) {
 	applied := false
 	for {
@@ -382,13 +388,10 @@ func (s *Store) applyPendingLocked(d *Doc) (desync, drain bool) {
 			break
 		}
 		delete(d.pending, d.version+1)
-		change, err := d.buf.Replace(next.start, next.removed, next.text)
+		change, err := d.replace(next)
 		if err != nil || d.buf.Len16() != next.length {
 			desync = true
 			break
-		}
-		if d.ends != nil {
-			d.ends = spliceEnds(d.ends, change, d.info.EOL)
 		}
 		d.version++
 		applied = true
@@ -472,6 +475,9 @@ func (s *Store) Reset(docID string, version int64, text string, conflict bool) a
 		return map[string]any{"ok": true}
 	}
 	fresh := buffer.New(mergeReset(d.buf.Text(), text))
+	if fresh.Text() != d.buf.Text() {
+		d.clearEndUndo()
+	}
 	if d.ends != nil {
 		d.ends = carryEnds(d.buf, fresh, d.ends, d.info.EOL)
 	}

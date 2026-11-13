@@ -17,8 +17,7 @@ import (
 	"github.com/duxlabs-dev/dux-edit/core/internal/textcodec"
 )
 
-// ErrConflict is what Elevator.Replace returns when the file no longer has the expected identity. The
-// helper's sentinel crosses the pkexec boundary as a code, so it is the one to match.
+// ErrConflict matches the helper's conflict code across the pkexec boundary.
 var ErrConflict = helper.ErrConflict
 
 type loaded struct {
@@ -141,8 +140,7 @@ func plainTextMD5(text string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// mergeReset returns the UI's text with everything it left alone taken from old, so the no-break spaces
-// and separators that TextEdit reports as plain ones survive outside the region that really differs.
+// Preserve stored no-break spaces and separators wherever the UI's normalized text is unchanged.
 func mergeReset(old, text string) string {
 	from, textFrom := 0, 0
 	for from < len(old) && textFrom < len(text) {
@@ -265,6 +263,7 @@ func (s *Store) Save(ctx context.Context, req SaveRequest) any {
 	d.info, d.identity, d.reported, d.lossy = info, identity, identity, false
 	if req.EOL != "" {
 		d.ends = nil
+		d.clearEndUndo()
 	}
 	d.elevated = elevated
 	if saveAs && !elevated {
@@ -450,6 +449,7 @@ func (s *Store) Reload(docID, encoding string) any {
 	d.stopGapLocked()
 	d.bumpLocked()
 	d.info, d.ends, d.lossy = ld.doc.Info, ld.doc.Ends, ld.doc.Lossy
+	d.clearEndUndo()
 	d.identity, d.reported, d.writable = ld.identity, ld.identity, ld.writable
 	d.dirty, d.swapStale = false, false
 	result := OpenResult{

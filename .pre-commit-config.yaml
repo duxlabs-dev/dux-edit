@@ -31,3 +31,9 @@ repos:
         language: system
         files: ^core/.*\.(go|mod|sum)$
         pass_filenames: false
+      - id: golangci-lint
+        name: golangci-lint
+        entry: bash -c 'cd core && make lint'
+        language: system
+        files: ^core/.*\.(go|mod|sum|yml)$
+        pass_filenames: false

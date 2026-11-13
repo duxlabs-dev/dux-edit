@@ -8,7 +8,6 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/duxlabs-dev/dux-go/log"
 	"github.com/spf13/cobra"
 
 	"github.com/duxlabs-dev/dux-edit/core/internal/backend"
@@ -85,9 +84,10 @@ func plusPosition(arg string) (int, int, bool) {
 }
 
 // Paths resolve against the caller's working directory, which the running app does not share.
-// The position goes to the first file: --line wins over +LINE, which wins over file:LINE.
+// For the first file, --line wins over +LINE, which wins over file:LINE.
 func openParams(args []string) (map[string]any, error) {
 	paths := make([]string, 0, len(args))
+	positions := make([]backend.OpenPosition, 0, len(args))
 	line, column := openFlags.line, openFlags.column
 	plusLine, plusColumn := 0, 0
 	for _, arg := range args {
@@ -100,22 +100,24 @@ func openParams(args []string) (map[string]any, error) {
 		if err != nil {
 			return nil, err
 		}
-		switch {
-		case len(paths) == 0 && line == 0:
+		if len(paths) == 0 && line == 0 {
 			line, column = l, c
-		case len(paths) > 0 && l > 0:
-			log.Warnf("%s: only the first file opens at a line", arg)
 		}
 		paths = append(paths, abs)
+		positions = append(positions, backend.OpenPosition{Line: l, Column: c})
 	}
 	if openFlags.line == 0 && plusLine > 0 {
 		line, column = plusLine, plusColumn
 	}
+	if len(positions) > 0 {
+		positions[0] = backend.OpenPosition{Line: line, Column: column}
+	}
 	return map[string]any{
-		"paths":  paths,
-		"line":   line,
-		"column": column,
-		"simple": openFlags.simple,
+		"paths":     paths,
+		"positions": positions,
+		"line":      line,
+		"column":    column,
+		"simple":    openFlags.simple,
 	}, nil
 }
 

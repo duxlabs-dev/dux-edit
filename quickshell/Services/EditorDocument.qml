@@ -4,8 +4,7 @@ import QtQuick
 import qs.Common
 import qs.Services
 
-// One open tab. Everything the shell chrome, the editor pane and plugins share about a document lives here.
-// Created by Documents; the editor pane writes the cursor and count properties and sets `editor`.
+// Documents owns the tab; EditorPane supplies cursor/counts and the loaded editor.
 QtObject {
     id: root
 
@@ -25,7 +24,6 @@ QtObject {
     property var queuedLoad: null
     // The core could not write this document's swap, so its unsaved edits live only in the core's memory.
     property bool swapFailed: false
-    // The file was on disk when it was last opened or saved.
     property bool existed: false
     // Its tab is gone; destroyed once the request in flight has answered.
     property bool orphaned: false
@@ -33,7 +31,9 @@ QtObject {
     property int version: 0
     property int savedVersion: 0
     property bool recoveredDirty: false
-    // Opened from a list of past files: a missing file closes the tab instead of starting a new file.
+    // Initial swap metadata is no longer authoritative after a doc.open reply.
+    property bool recoveryPending: false
+    // A past file or Markdown link: a missing file closes the tab instead of starting a new file.
     property bool mustExist: false
     readonly property bool dirty: version !== savedVersion || recoveredDirty
     readonly property bool isDraft: path === ""
@@ -71,7 +71,6 @@ QtObject {
     // "" | "modified" | "deleted": the file changed on disk under unsaved edits.
     property string conflict: ""
     property bool saving: false
-    // The last successful save was an autosave.
     property bool autoSaved: false
     // A line ending picked for the next save, "" for what the file has.
     property string pendingEol: ""
@@ -110,6 +109,7 @@ QtObject {
     signal saved
 
     function applyOpenResult(result) {
+        recoveryPending = false;
         docId = result.docId;
         swapId = result.swapId;
         path = result.path;
@@ -187,8 +187,7 @@ QtObject {
         loaded = false;
     }
 
-    // Closes the document in core with its unsaved edits in the swap. The pane's text is taken now and sent first if
-    // the core's copy is stale. done hears whether the core let go.
+    // Stash the pane's current text; done reports whether core closed it safely.
     function stash(saveFirst, done) {
         const id = docId;
         const params = {
@@ -278,7 +277,7 @@ QtObject {
         });
     }
 
-    function edited(start, removed, text, length) {
+    function edited(start, removed, text, length, undoSteps, redo) {
         version++;
         Backend.notify("doc.edit", {
             "docId": docId,
@@ -286,7 +285,9 @@ QtObject {
             "start": start,
             "removed": removed,
             "text": text,
-            "length": length
+            "length": length,
+            "undoSteps": undoSteps,
+            "redo": redo
         });
         Documents.noteEdit(root);
     }
@@ -354,7 +355,6 @@ QtObject {
         });
     }
 
-    // Names a draft; the core keeps it in the swap sidecar so recovery can show it.
     function setTitle(name) {
         title = name;
         if (docId === "")
