@@ -1,7 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <rect x="8" y="8" width="112" height="112" rx="32" fill="#4F378B"/>
-  <path d="M43 24c-5 0-7.5 2.5-8 7l-8.7 62.3c-.8 5.8 2.7 9.4 8.4 9.9l32.5 2.4c2 .2 3.9-.6 5.4-2.2l20.5-20.7c1.4-1.4 2.2-3.2 2.4-5.1l8.7-40.2c.7-5-2.5-8-7.5-8.4Z" fill="#D0BCFF"/>
-  <path d="m67.1 105.6.9-17.4c.2-5.4 4.6-9.7 10-9.9l17.8-.8Z" fill="#9A82DB"/>
-  <path d="m47 45 41 3m-44 13 37 3m-40 12 20 1.5" fill="none" stroke="#4F378B" stroke-width="8" stroke-linecap="round"/>
-  <path d="M75 72v12" fill="none" stroke="#FFB4AB" stroke-width="7" stroke-linecap="round"/>
+<!-- sticky note glyph from Material Symbols Rounded, Apache License 2.0, https://github.com/google/material-design-icons -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="body" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F5F0FF"/>
+      <stop offset="1" stop-color="#D0BCFF"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 64) scale(0.0666667)">
+    <path d="M180-120q-24.75 0-42.37-17.63Q120-155.25 120-180v-600q0-24.75 17.63-42.38Q155.25-840 180-840h600q24.75 0 42.38 17.62Q840-804.75 840-780v395q0 12.44-5 23.72T822-342L618-138q-8 8-19.28 13-11.28 5-23.72 5H180Z" fill="url(#body)"/>
+    <path d="M180-180h400v-170q0-12.75 8.63-21.38Q597.25-380 610-380h170v-400H180v600Zm0 60q-24.75 0-42.37-17.63Q120-155.25 120-180v-600q0-24.75 17.63-42.38Q155.25-840 180-840h600q24.75 0 42.38 17.62Q840-804.75 840-780v395q0 12.44-5 23.72T822-342L618-138q-8 8-19.28 13-11.28 5-23.72 5H180Z" fill="#553C9A"/>
+    <g fill="#9F7AEA">
+      <path d="M630-580H330q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h300q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5Z"/>
+      <path d="M440-420H330q-12.75 0-21.37-8.68-8.63-8.67-8.63-21.5 0-12.82 8.63-21.32 8.62-8.5 21.37-8.5h110q12.75 0 21.38 8.68 8.62 8.67 8.62 21.5 0 12.82-8.62 21.32-8.63 8.5-21.38 8.5Z"/>
+    </g>
+  </g>
 </svg>
