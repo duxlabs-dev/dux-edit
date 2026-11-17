@@ -5,6 +5,7 @@ import QtQuick.Templates as T
 import qs.Common
 import qs.DCommon.Common
 import qs.DCommon.Widgets
+import qs.Modules.Editor
 
 // One row of a grouped settings list.
 T.Control {
@@ -17,10 +18,11 @@ T.Control {
     property string iconName: ""
     property bool clickable: false
     property bool showChevron: false
-    property real paddingH: Style.spacingL + Style.spacingXS
-    property real paddingV: Style.spacingM
-    property real minHeight: subtitle !== "" ? Style.listItemTwoLineHeight : Style.listItemHeight
-    property color rowColor: Style.cardSurface
+    property bool resettable: false
+    property real paddingH: Style.spacingL + Style.spacingXS + EditorMetrics.densityStepS
+    property real paddingV: Style.spacingM + EditorMetrics.densityStepS
+    property real minHeight: subtitle !== "" ? EditorMetrics.settingsRowMinHeightTwoLine : EditorMetrics.settingsRowMinHeight
+    property color rowColor: Style.foregroundColor(Style.cardSurface, true)
 
     default property alias trailing: trailingSlot.data
     property alias body: bodySlot.data
@@ -32,6 +34,7 @@ T.Control {
     readonly property real disabledOpacity: 0.38
 
     signal clicked
+    signal resetRequested
 
     function edgeRow(first) {
         const siblings = parent?.visibleChildren;
@@ -170,8 +173,8 @@ T.Control {
 
                 anchors.left: leadingIcon.visible ? leadingIcon.right : parent.left
                 anchors.leftMargin: leadingIcon.visible ? Style.spacingL : 0
-                anchors.right: trailingArea.visible ? trailingArea.left : parent.right
-                anchors.rightMargin: trailingArea.visible ? Style.spacingL : 0
+                anchors.right: resetButton.active ? resetButton.left : (trailingArea.visible ? trailingArea.left : parent.right)
+                anchors.rightMargin: resetButton.active || trailingArea.visible ? Style.spacingL : 0
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: Style.spacingXXS
                 opacity: root.enabled ? 1 : root.disabledOpacity
@@ -196,6 +199,24 @@ T.Control {
                     wrapMode: Text.WordWrap
                     visible: root.subtitle !== ""
                     horizontalAlignment: Text.AlignLeft
+                }
+            }
+
+            Loader {
+                id: resetButton
+
+                anchors.right: trailingArea.visible ? trailingArea.left : parent.right
+                anchors.rightMargin: trailingArea.visible ? Style.spacingS : 0
+                anchors.verticalCenter: parent.verticalCenter
+                active: root.resettable
+                visible: active
+
+                sourceComponent: DActionButton {
+                    buttonSize: Style.buttonHeightS
+                    iconName: "restart_alt"
+                    tooltipText: I18n.tr("Reset to Default", "settings row button restoring the default value")
+                    enabled: root.enabled
+                    onClicked: root.resetRequested()
                 }
             }
 

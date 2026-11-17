@@ -1,6 +1,7 @@
 import QtQuick
 import qs.DCommon.Common
 import qs.DCommon.Widgets
+import qs.Modules.Editor
 
 // A titled group of SettingsRows drawn as one grouped list.
 Column {
@@ -10,7 +11,7 @@ Column {
     default property alias content: group.data
 
     width: parent?.width ?? 0
-    spacing: Style.spacingS
+    spacing: Math.max(Style.spacingXS, Style.spacingS + EditorMetrics.densityStepS)
 
     StyledText {
         width: parent.width

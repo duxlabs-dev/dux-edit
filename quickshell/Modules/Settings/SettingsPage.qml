@@ -18,7 +18,7 @@ DFlickable {
 
         anchors.horizontalCenter: parent.horizontalCenter
         width: Math.min(root.width - Style.spacingL * 2, EditorMetrics.settingsPageWidth)
-        topPadding: Style.spacingXS
-        spacing: Style.spacingL
+        topPadding: Math.max(0, Style.spacingXS + EditorMetrics.densityStepS)
+        spacing: Style.spacingL + EditorMetrics.densityStepS
     }
 }

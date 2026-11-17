@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/duxlabs-dev/dux-edit/core/internal/blur"
 	"github.com/duxlabs-dev/dux-edit/core/internal/dmsimport"
 	"github.com/duxlabs-dev/dux-edit/core/internal/paths"
 	"github.com/duxlabs-dev/dux-edit/core/internal/portal"
@@ -54,6 +55,14 @@ func (b *Backend) systemElevation(context.Context, map[string]any) any {
 		return map[string]any{"available": true}
 	}
 	return map[string]any{"available": false, "reason": state}
+}
+
+func (b *Backend) systemBlur(context.Context, map[string]any) any {
+	supported, err := blur.Supported()
+	if err != nil {
+		return fail("EIO", err.Error())
+	}
+	return map[string]any{"ok": true, "supported": supported}
 }
 
 // With apply the result also reaches the UI as a "ui" import action, which is how the CLI command lands.

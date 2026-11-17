@@ -227,7 +227,7 @@ Rectangle {
     }
 
     implicitHeight: content.implicitHeight + Style.spacingS * 2
-    color: Style.cardSurface
+    color: Style.floatingWindowNestedSurface
     visible: opened
 
     onOptionsChanged: {

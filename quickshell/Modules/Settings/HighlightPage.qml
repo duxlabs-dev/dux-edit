@@ -138,7 +138,7 @@ SettingsPage {
                         width: (grid.width - grid.spacing * (grid.columns - 1)) / grid.columns
                         height: Style.listItemHeight
                         radius: Style.cornerRadiusM
-                        color: Style.cardSurface
+                        color: Style.foregroundColor(Style.cardSurface, true)
 
                         DColorButton {
                             id: swatch

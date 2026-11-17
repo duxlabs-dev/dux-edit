@@ -82,6 +82,7 @@ var Methods = []MethodSpec{
 	{Name: "dialog.saveFile", Group: "system", Desc: "Portal save dialog", Params: []ParamSpec{opt("title", "dialog title"), opt("dir", "starting directory"), opt("name", "suggested file name")}},
 	{Name: "system.colorScheme.get", Group: "system", Desc: "Desktop light/dark preference"},
 	{Name: "system.elevation", Group: "system", Desc: "Whether saving as administrator can be offered"},
+	{Name: "system.blur", Group: "system", Desc: "Whether the compositor offers background blur"},
 	{Name: "import.dms", Group: "system", Desc: "Copy DMS notepad tabs and settings", Params: []ParamSpec{opt("dryRun", "report without copying"), opt("apply", "also send the result to the UI as a ui import action")}},
 }
 

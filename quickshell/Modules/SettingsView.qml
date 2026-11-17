@@ -4,21 +4,24 @@ import QtQuick
 import qs.Common
 import qs.DCommon.Common
 import qs.DCommon.Widgets
+import qs.Modules.Editor
 import qs.Modules.Plugins
 import qs.Modules.Settings
 import qs.Services
 import "../DCommon/Common/StockTheme.js" as StockTheme
 
-// In-window settings: a list of categories, each opening as a subpage. Loaded only while open.
+// In-window settings: a sidebar, or a drill-down list when narrow. Loaded only while open.
 Rectangle {
     id: root
 
     signal closeRequested
     signal colorEditRequested(string role, string label, string current)
 
-    // "" is the category list.
+    // "" is the category list when narrow; wide shows the first category instead.
     property string page: ""
     property bool forward: true
+    readonly property bool wide: width >= EditorMetrics.settingsSplitMinWidth
+    readonly property string shownPage: page !== "" || !wide ? page : pages[0].id
     readonly property bool motion: !Style.reduceMotion && Style.currentAnimationSpeed !== Style.AnimationSpeed.None
 
     readonly property var pages: [
@@ -26,7 +29,13 @@ Rectangle {
             "id": "appearance",
             "icon": "palette",
             "title": I18n.tr("Appearance", "settings category"),
-            "hint": I18n.tr("View mode, theme and colors", "settings category description")
+            "hint": I18n.tr("View mode, colors, fonts and density", "settings category description")
+        },
+        {
+            "id": "window",
+            "icon": "animation",
+            "title": I18n.tr("Window and Motion", "settings category"),
+            "hint": I18n.tr("Opacity, blur, animations and focus ring", "settings category description")
         },
         {
             "id": "editor",
@@ -66,24 +75,39 @@ Rectangle {
         }
     ]
 
+    function pageIndex(id) {
+        return pages.findIndex(entry => entry.id === id);
+    }
+
     function open(id) {
-        forward = true;
+        if (id === shownPage)
+            return;
+        forward = pageIndex(id) > pageIndex(shownPage);
         page = id;
     }
 
     function back() {
-        if (page === "") {
+        if (wide || page === "") {
             closeRequested();
             return;
         }
-        forward = false;
-        page = "";
+        open("");
+    }
+
+    function focusPage() {
+        if (wide) {
+            sidebar.focusCurrent();
+            return;
+        }
+        forceActiveFocus();
     }
 
     function pageComponent(id) {
         switch (id) {
         case "appearance":
             return appearancePage;
+        case "window":
+            return windowPage;
         case "editor":
             return editorPage;
         case "files":
@@ -126,7 +150,8 @@ Rectangle {
         return StockTheme.presetLabel(name);
     }
 
-    color: Style.hostSurface
+    // Solid like the editor while the window is see-through.
+    color: Style.foregroundColor(Style.hostSurface, true)
     Keys.onEscapePressed: back()
 
     Item {
@@ -145,7 +170,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             buttonSize: Style.buttonHeightS
             iconName: "arrow_back"
-            tooltipText: I18n.tr("Back", "tooltip on the button leaving a settings page")
+            tooltipText: root.wide || root.page === "" ? I18n.tr("Close Settings", "tooltip on the button leaving settings") : I18n.tr("Back", "tooltip on the button leaving a settings page")
             onClicked: root.back()
         }
 
@@ -155,7 +180,7 @@ Rectangle {
             anchors.right: parent.right
             anchors.rightMargin: Style.spacingL
             anchors.verticalCenter: parent.verticalCenter
-            text: root.pages.find(entry => entry.id === root.page)?.title ?? I18n.tr("Settings", "settings page title")
+            text: root.pages.find(entry => entry.id === root.shownPage)?.title ?? I18n.tr("Settings", "settings page title")
             color: Style.surfaceText
             font.pixelSize: Style.fontSizeXLarge
             elide: Text.ElideRight
@@ -163,13 +188,29 @@ Rectangle {
         }
     }
 
+    SettingsSidebar {
+        id: sidebar
+
+        anchors.left: parent.left
+        anchors.top: header.bottom
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: Style.spacingL
+        anchors.topMargin: Style.spacingXS
+        width: EditorMetrics.settingsSidebarWidth
+        visible: root.wide
+        pages: root.pages
+        current: root.shownPage
+        onPageSelected: id => root.open(id)
+    }
+
     Item {
         id: host
 
-        anchors.left: parent.left
+        anchors.left: root.wide ? sidebar.right : parent.left
         anchors.right: parent.right
         anchors.top: header.bottom
         anchors.bottom: parent.bottom
+        anchors.leftMargin: root.wide ? Style.spacingS : 0
         clip: true
 
         Loader {
@@ -177,9 +218,9 @@ Rectangle {
 
             width: host.width
             height: host.height
-            sourceComponent: root.pageComponent(root.page)
+            sourceComponent: root.pageComponent(root.shownPage)
             onLoaded: {
-                root.forceActiveFocus();
+                root.focusPage();
                 if (root.motion)
                     enter.restart();
             }
@@ -275,6 +316,238 @@ Rectangle {
                     optionValues: StockTheme.presetNames()
                     currentValue: SettingsData.presetTheme
                     onValueChanged: value => SettingsData.presetTheme = value
+                }
+            }
+
+            SettingsCard {
+                title: I18n.tr("Typography", "settings section")
+
+                SettingsDropdownRow {
+                    text: I18n.tr("Interface Font", "setting name")
+                    description: I18n.tr("Automatic follows the Dux Shell fonts when it publishes them.", "setting description")
+                    options: [I18n.tr("Automatic", "interface font source"), I18n.tr("System", "interface font source"), I18n.tr("Built-in", "interface font source")]
+                    optionValues: ["auto", "system", "custom"]
+                    currentValue: SettingsData.fontSource
+                    onValueChanged: value => SettingsData.fontSource = value
+                }
+
+                SettingsSliderRow {
+                    visible: SettingsData.fontSource !== "auto"
+                    text: I18n.tr("Font Weight", "setting name")
+                    minimum: Font.Thin
+                    maximum: Font.Black
+                    step: 100
+                    value: SettingsData.fontWeight
+                    resettable: !SettingsData.isDefault("fontWeight")
+                    onResetRequested: SettingsData.resetToDefault("fontWeight")
+                    onSliderValueChanged: newValue => SettingsData.fontWeight = newValue
+                }
+
+                SettingsSliderRow {
+                    visible: SettingsData.fontSource !== "auto"
+                    text: I18n.tr("Font Scale", "setting name")
+                    minimum: 75
+                    maximum: 150
+                    unit: "%"
+                    value: Math.round(SettingsData.fontScale * 100)
+                    resettable: !SettingsData.isDefault("fontScale")
+                    onResetRequested: SettingsData.resetToDefault("fontScale")
+                    onSliderValueChanged: newValue => SettingsData.fontScale = newValue / 100
+                }
+            }
+
+            SettingsCard {
+                title: I18n.tr("Shape", "settings section")
+
+                SettingsSliderRow {
+                    text: I18n.tr("Corner Rounding", "setting name")
+                    description: I18n.tr("50 is the %1 default.", "corner rounding description, %1 is Material").arg("Material")
+                    minimum: 0
+                    maximum: 100
+                    value: SettingsData.radiusStrength
+                    resettable: !SettingsData.isDefault("radiusStrength")
+                    onResetRequested: SettingsData.resetToDefault("radiusStrength")
+                    onSliderValueChanged: newValue => SettingsData.radiusStrength = newValue
+                }
+            }
+
+            SettingsCard {
+                title: I18n.tr("Density", "settings section")
+
+                SettingsDropdownRow {
+                    text: I18n.tr("Interface Density", "setting name")
+                    description: I18n.tr("Room around controls and rows.", "setting description")
+                    options: [I18n.tr("Spacious", "interface density"), I18n.tr("Comfortable", "interface density"), I18n.tr("Compact", "interface density"), I18n.tr("Dense", "interface density")]
+                    optionValues: ["spacious", "comfortable", "compact", "dense"]
+                    currentValue: SettingsData.density
+                    onValueChanged: value => SettingsData.setDensity(value)
+                }
+            }
+
+            SettingsCard {
+                title: I18n.tr("Text Rendering", "settings section")
+
+                SettingsDropdownRow {
+                    text: I18n.tr("Method", "text rendering setting name")
+                    description: I18n.tr("How interface text is drawn. Document text is not affected.", "setting description")
+                    options: [I18n.tr("Distance Field", "text rendering method"), I18n.tr("Native", "text rendering method"), I18n.tr("Curves", "text rendering method")]
+                    optionValues: [String(Style.TextRenderType.Qt), String(Style.TextRenderType.Native), String(Style.TextRenderType.Curve)]
+                    currentValue: String(SettingsData.textRenderType)
+                    onValueChanged: value => SettingsData.textRenderType = Number(value)
+                }
+
+                SettingsDropdownRow {
+                    text: I18n.tr("Quality", "text rendering setting name")
+                    enabled: SettingsData.textRenderType === Style.TextRenderType.Qt
+                    options: [I18n.tr("Default", "text rendering quality"), I18n.tr("Low", "text rendering quality"), I18n.tr("Normal", "text rendering quality"), I18n.tr("High", "text rendering quality"), I18n.tr("Very High", "text rendering quality")]
+                    optionValues: [String(Style.TextRenderQuality.Default), String(Style.TextRenderQuality.Low), String(Style.TextRenderQuality.Normal), String(Style.TextRenderQuality.High), String(Style.TextRenderQuality.VeryHigh)]
+                    currentValue: String(SettingsData.textRenderQuality)
+                    onValueChanged: value => SettingsData.textRenderQuality = Number(value)
+                }
+            }
+        }
+    }
+
+    Component {
+        id: windowPage
+
+        SettingsPage {
+            Component.onCompleted: BlurService.probe()
+
+            SettingsCard {
+                title: I18n.tr("Window", "settings section")
+
+                SettingsSliderRow {
+                    text: I18n.tr("Opacity", "window opacity setting name")
+                    description: I18n.tr("Lets the desktop show through the window.", "setting description")
+                    minimum: 0
+                    maximum: 100
+                    unit: "%"
+                    value: Math.round(SettingsData.floatingWindowTransparency * 100)
+                    resettable: !SettingsData.isDefault("floatingWindowTransparency")
+                    onResetRequested: SettingsData.resetToDefault("floatingWindowTransparency")
+                    onSliderValueChanged: newValue => SettingsData.floatingWindowTransparency = newValue / 100
+                }
+
+                SettingsToggleRow {
+                    text: I18n.tr("Foreground Layers", "setting name")
+                    description: I18n.tr("Keeps the document and panels solid when the window is see-through.", "setting description")
+                    checked: SettingsData.floatingWindowForegroundLayers
+                    onToggled: checked => SettingsData.floatingWindowForegroundLayers = checked
+                }
+
+                SettingsSliderRow {
+                    text: I18n.tr("Layer Opacity", "foreground layer opacity setting name")
+                    enabled: SettingsData.floatingWindowForegroundLayers
+                    minimum: 0
+                    maximum: 100
+                    unit: "%"
+                    value: Math.round(SettingsData.floatingWindowForegroundTransparency * 100)
+                    resettable: !SettingsData.isDefault("floatingWindowForegroundTransparency")
+                    onResetRequested: SettingsData.resetToDefault("floatingWindowForegroundTransparency")
+                    onSliderValueChanged: newValue => SettingsData.floatingWindowForegroundTransparency = newValue / 100
+                }
+
+                SettingsToggleRow {
+                    visible: BlurService.available
+                    text: I18n.tr("Background Blur", "setting name")
+                    description: I18n.tr("Blurs what shows through the window. Needs an opacity below 100%.", "setting description")
+                    checked: SettingsData.blurEnabled
+                    onToggled: checked => SettingsData.blurEnabled = checked
+                }
+
+                SettingsRow {
+                    visible: BlurService.probed && !BlurService.available
+                    title: I18n.tr("Background Blur", "setting name")
+                    subtitle: I18n.tr("Your compositor does not support background blur.", "hint shown instead of the background blur toggle")
+                }
+            }
+
+            SettingsCard {
+                title: I18n.tr("Motion", "settings section")
+
+                SettingsSliderRow {
+                    text: I18n.tr("Animation Duration", "setting name")
+                    description: I18n.tr("0 turns animations off.", "setting description")
+                    minimum: 0
+                    maximum: 1000
+                    step: 50
+                    unit: "ms"
+                    value: SettingsData.animationDuration
+                    resettable: !SettingsData.isDefault("animationDuration")
+                    onResetRequested: SettingsData.resetToDefault("animationDuration")
+                    onSliderValueChanged: newValue => SettingsData.animationDuration = newValue
+                }
+
+                SettingsDropdownRow {
+                    text: I18n.tr("Spring", "spring bounce setting name")
+                    options: [I18n.tr("Smooth", "spring bounce"), I18n.tr("Balanced", "spring bounce"), I18n.tr("Playful", "spring bounce")]
+                    optionValues: ["0", "1", "2"]
+                    currentValue: String(SettingsData.springBounce)
+                    onValueChanged: value => SettingsData.springBounce = Number(value)
+                }
+
+                SettingsToggleRow {
+                    text: I18n.tr("Ripple Effects", "setting name")
+                    checked: SettingsData.enableRippleEffects
+                    onToggled: checked => SettingsData.enableRippleEffects = checked
+                }
+
+                SettingsToggleRow {
+                    text: I18n.tr("Reduce Motion", "setting name")
+                    checked: SettingsData.reduceMotion
+                    onToggled: checked => SettingsData.reduceMotion = checked
+                }
+            }
+
+            SettingsCard {
+                title: I18n.tr("Focus Ring", "settings section")
+
+                SettingsToggleRow {
+                    text: I18n.tr("Focus Ring", "setting name")
+                    description: I18n.tr("Outlines the control that has keyboard focus.", "setting description")
+                    checked: SettingsData.focusRingEnabled
+                    onToggled: checked => SettingsData.focusRingEnabled = checked
+                }
+
+                SettingsSliderRow {
+                    text: I18n.tr("Thickness", "focus ring thickness setting name")
+                    enabled: SettingsData.focusRingEnabled
+                    minimum: 10
+                    maximum: 40
+                    step: 5
+                    decimals: 1
+                    unit: "px"
+                    value: Math.round(SettingsData.focusRingWidth * 10)
+                    resettable: !SettingsData.isDefault("focusRingWidth")
+                    onResetRequested: SettingsData.resetToDefault("focusRingWidth")
+                    onSliderValueChanged: newValue => SettingsData.focusRingWidth = newValue / 10
+                }
+
+                SettingsDropdownRow {
+                    text: I18n.tr("Color", "focus ring color setting name")
+                    enabled: SettingsData.focusRingEnabled
+                    options: [I18n.tr("Primary", "focus ring color"), I18n.tr("Secondary", "focus ring color"), I18n.tr("Outline", "focus ring color"), I18n.tr("Text", "focus ring color")]
+                    optionValues: ["primary", "secondary", "outline", "surfaceText"]
+                    currentValue: SettingsData.focusRingColor
+                    onValueChanged: value => SettingsData.focusRingColor = value
+                }
+            }
+
+            SettingsCard {
+                title: I18n.tr("Scrolling", "settings section")
+
+                SettingsToggleRow {
+                    text: I18n.tr("Scrollbars", "setting name")
+                    checked: SettingsData.scrollbarsEnabled
+                    onToggled: checked => SettingsData.scrollbarsEnabled = checked
+                }
+
+                SettingsToggleRow {
+                    text: I18n.tr("Scroll Shadows", "setting name")
+                    description: I18n.tr("Fades the edges of lists that scroll.", "setting description")
+                    checked: SettingsData.scrollShadowsEnabled
+                    onToggled: checked => SettingsData.scrollShadowsEnabled = checked
                 }
             }
         }

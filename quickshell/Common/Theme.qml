@@ -136,6 +136,10 @@ Singleton {
     property color surfaceContainer: currentThemeData.surfaceContainer
     property color surfaceContainerHigh: currentThemeData.surfaceContainerHigh
     property color surfaceContainerHighest: currentThemeData.surfaceContainerHighest || surfaceContainerHigh
+    readonly property color hostSurface: surface
+    readonly property color cardSurface: surfaceContainer
+    readonly property color chipSurface: surfaceContainerHigh
+    readonly property color chipSurfaceNested: surfaceContainerHighest
     readonly property color tooltipSurface: inverseSurface
     readonly property color tooltipText: Contrast.readableOn(tooltipSurface, [inverseOnSurface].concat(onContainerCandidates))
     property color inverseSurface: currentThemeData.inverseSurface || surfaceText
@@ -193,7 +197,7 @@ Singleton {
         Binding {
             target: root
             property: "onErrorContainer"
-            value: root.currentThemeData.errorContainerText || root.onSurface
+            value: root.currentThemeData.errorContainerText || root.blend(root.surfaceText, root.error, 0.5)
         },
         Binding {
             target: root
@@ -204,16 +208,19 @@ Singleton {
     readonly property var onContainerCandidates: [surfaceText, surface, contrastLight, contrastDark]
 
     property color error: currentThemeData.error
-    property color errorContainer: currentThemeData.errorContainer || surfaceContainerHigh
+    property color errorContainer: currentThemeData.errorContainer || blend(surfaceContainerHigh, error, 0.35)
     property color warning: currentThemeData.warning
 
     readonly property real layerOutlineOpacity: Math.max(0, Math.min(1, SettingsData.blurLayerOutlineOpacity))
 
     readonly property FontSource typography: FontSource {
-        source: "auto"
+        source: SettingsData.fontSource
         dmsPath: root.watching ? root.dmsTypographyPath : ""
+        weight: SettingsData.fontWeight
+        scale: SettingsData.fontScale
     }
     readonly property real fontScale: typography.fontScale
+    property real fontSizeXSmall: Math.round(fontScale * 10)
     property real fontSizeSmall: Math.round(fontScale * 12)
     property real fontSizeMedium: Math.round(fontScale * 14)
     property real fontSizeLarge: Math.round(fontScale * 16)
@@ -222,53 +229,92 @@ Singleton {
     property real fontSizeDisplay: Math.round(fontScale * 36)
     property real fontSizeDisplayLarge: Math.round(fontScale * 57)
 
-    readonly property real radiusStrength: 50
+    readonly property real radiusStrength: SettingsData.radiusStrength
 
-    readonly property real sliderHandleHeightS: 44
-    readonly property real sliderHandleHeightM: 44
-    readonly property real focusRingWidth: 1.5
+    readonly property int densityLevel: {
+        switch (SettingsData.density) {
+        case "spacious":
+            return 1;
+        case "compact":
+            return -1;
+        case "dense":
+            return -2;
+        default:
+            return 0;
+        }
+    }
+
+    readonly property real focusRingWidth: SettingsData.focusRingEnabled ? SettingsData.focusRingWidth : 0
     readonly property real focusRingOffset: 3
+    readonly property color focusRingColor: {
+        switch (SettingsData.focusRingColor) {
+        case "secondary":
+            return secondary;
+        case "outline":
+            return outline;
+        case "surfaceText":
+            return surfaceText;
+        default:
+            return primary;
+        }
+    }
     readonly property color scrimColor: currentThemeData.scrim || "#000000"
     readonly property color backdropColor: surface.hslLightness >= 0.5 ? surfaceDim : scrimColor
-    readonly property real tooltipMaxWidth: 500
-    readonly property real clockFaceSize: 250
-    readonly property real clockOuterRingRatio: 0.34
-    readonly property real clockInnerRingRatio: 0.2
-    readonly property real clockHandleSize: 40
 
     readonly property string fontFamily: typography.fontFamily
     readonly property string monoFontFamily: typography.monoFontFamily
     readonly property string displayFontFamily: typography.displayFontFamily
     readonly property int fontWeight: typography.fontWeight
 
-    readonly property real floatingWindowTransparency: 1
-    readonly property bool floatingWindowForegroundLayers: true
-    readonly property real floatingWindowForegroundTransparency: 1
+    readonly property real floatingWindowTransparency: unitClamp(SettingsData.floatingWindowTransparency)
+    readonly property bool floatingWindowForegroundLayers: SettingsData.floatingWindowForegroundLayers
+    readonly property real floatingWindowForegroundTransparency: unitClamp(SettingsData.floatingWindowForegroundTransparency)
     readonly property real floatingWindowForegroundAlpha: Surface.foregroundAlpha(floatingWindowForegroundLayers, floatingWindowForegroundTransparency)
     readonly property real popupTransparency: floatingWindowTransparency
+    readonly property bool foregroundLayers: floatingWindowForegroundLayers
+    readonly property real foregroundLayerTransparency: floatingWindowForegroundTransparency
     readonly property real foregroundAlpha: floatingWindowForegroundAlpha
-    readonly property bool blurLayersActive: false
+    readonly property bool blurLayersActive: App.BlurService.enabled && floatingWindowTransparency < 1
 
-    readonly property color floatingSurface: withAlpha(surfaceContainer, popupTransparency)
-    readonly property color nestedSurface: withAlpha(surfaceContainerHigh, foregroundAlpha)
-    readonly property color floatingWindowSurface: withAlpha(surfaceContainer, floatingWindowTransparency)
-    readonly property color floatingWindowNestedSurface: withAlpha(surfaceContainerHigh, floatingWindowForegroundAlpha)
-    readonly property color floatingWindowFieldColor: floatingWindowNestedSurface
-    readonly property color popupFieldColor: nestedSurface
+    readonly property color floatingSurface: withAlpha(hostSurface, popupTransparency)
+    readonly property color nestedSurface: foregroundColor(cardSurface)
+    readonly property color floatingWindowSurface: withAlpha(hostSurface, floatingWindowTransparency)
+    readonly property color floatingWindowNestedSurface: foregroundColor(cardSurface, true)
+    readonly property color floatingWindowFieldColor: foregroundColor(chipSurface, true)
+    readonly property color popupFieldColor: foregroundColor(chipSurface)
+
+    function unitClamp(value) {
+        if (typeof value !== "number" || !isFinite(value))
+            return 1;
+        return Math.max(0, Math.min(1, value));
+    }
+
+    function foregroundColor(baseColor, floatingWindow = false) {
+        return Style.blendAlpha(baseColor, floatingWindow ? floatingWindowForegroundAlpha : foregroundAlpha);
+    }
 
     property color widgetBaseHoverColor: {
         const blended = blend(surfaceContainerHigh, primary, 0.1);
         return withAlpha(blended, Math.max(0.3, blended.a));
     }
 
-    readonly property int currentAnimationBaseDuration: 500
-    readonly property int currentAnimationSpeed: Style.AnimationSpeed.Custom
+    readonly property int currentAnimationBaseDuration: Math.max(0, SettingsData.animationDuration)
+    readonly property int currentAnimationSpeed: currentAnimationBaseDuration > 0 ? Style.AnimationSpeed.Custom : Style.AnimationSpeed.None
     readonly property int shorterDuration: Math.round(currentAnimationBaseDuration * 0.2)
     readonly property int shortDuration: Math.round(currentAnimationBaseDuration * 0.3)
     readonly property int mediumDuration: Math.round(currentAnimationBaseDuration * 0.6)
-
-    readonly property real stateLayerFocus: 0.12
-    readonly property real stateLayerPressed: 0.12
+    readonly property var expressiveDurations: ({
+            "fast": currentAnimationBaseDuration * 0.4,
+            "normal": currentAnimationBaseDuration * 0.8,
+            "large": currentAnimationBaseDuration * 1.2,
+            "extraLarge": currentAnimationBaseDuration * 2.0,
+            "expressiveFastSpatial": currentAnimationBaseDuration * 0.7,
+            "expressiveDefaultSpatial": currentAnimationBaseDuration,
+            "expressiveSlowSpatial": currentAnimationBaseDuration * 1.3,
+            "expressiveFastEffects": currentAnimationBaseDuration * 0.3,
+            "expressiveEffects": currentAnimationBaseDuration * 0.4,
+            "expressiveSlowEffects": currentAnimationBaseDuration * 0.6
+        })
 
     function withAlpha(c, a) {
         return Style.withAlpha(c, a);

@@ -22,6 +22,7 @@ FloatingWindow {
     readonly property bool hasEditor: doc?.editor ? true : false
     readonly property bool canEdit: hasEditor && !doc.readOnly
     property bool settingsOpen: false
+    property string settingsPage: ""
     // An open dialog owns the keyboard; Ctrl+W or Ctrl+Q behind it would act on what it asks about.
     readonly property bool dialogOpen: prompt.opened || inputDialog.opened
     readonly property int recentLimit: 10
@@ -56,12 +57,6 @@ FloatingWindow {
         doc?.editor?.focusEditor();
     }
 
-    function openSubmenu(menu) {
-        const x = windowMenu.x;
-        const y = windowMenu.y;
-        windowMenu.close();
-        menu.openAt(x, y);
-    }
 
     function droppedPaths(urls) {
         const paths = [];
@@ -252,7 +247,8 @@ FloatingWindow {
     implicitWidth: SessionData.windowWidth
     implicitHeight: SessionData.windowHeight
     minimumSize: Qt.size(EditorMetrics.windowMinWidth, EditorMetrics.windowMinHeight)
-    color: Style.hostSurface
+    color: Style.floatingWindowSurface
+    surfaceFormat.opaque: false
 
     onWidthChanged: {
         if (width > 0)
@@ -334,6 +330,16 @@ FloatingWindow {
         targetWindow: window
     }
 
+    Loader {
+        active: Style.blurLayersActive
+
+        sourceComponent: WindowBlur {
+            targetWindow: window
+            blurWidth: window.width
+            blurHeight: window.height
+        }
+    }
+
     Item {
         id: root
 
@@ -396,6 +402,8 @@ FloatingWindow {
         TabStrip {
             id: tabStrip
 
+            // Hidden under settings, or they show through a see-through page.
+            opacity: window.settingsOpen ? 0 : 1
             anchors.top: header.bottom
             anchors.left: parent.left
             anchors.right: parent.right
@@ -409,6 +417,7 @@ FloatingWindow {
         ConflictBanner {
             id: banner
 
+            opacity: window.settingsOpen ? 0 : 1
             anchors.top: tabStrip.bottom
             anchors.left: parent.left
             anchors.right: parent.right
@@ -418,6 +427,7 @@ FloatingWindow {
         Rectangle {
             id: lostBanner
 
+            opacity: window.settingsOpen ? 0 : 1
             anchors.top: banner.bottom
             anchors.left: parent.left
             anchors.right: parent.right
@@ -444,10 +454,17 @@ FloatingWindow {
         Item {
             id: content
 
+            opacity: window.settingsOpen ? 0 : 1
             anchors.top: lostBanner.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: status.top
+
+            // Keeps text on a solid surface when the window is see-through.
+            Rectangle {
+                anchors.fill: parent
+                color: Style.foregroundColor(Style.hostSurface, true)
+            }
 
             Repeater {
                 model: Documents.tabModel
@@ -482,6 +499,7 @@ FloatingWindow {
         StatusBar {
             id: status
 
+            opacity: window.settingsOpen ? 0 : 1
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.bottom: parent.bottom
@@ -497,13 +515,18 @@ FloatingWindow {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             active: window.settingsOpen
-            onLoaded: item.forceActiveFocus()
+            onLoaded: item.focusPage()
             onActiveChanged: {
                 if (!active)
                     window.doc?.editor?.focusEditor();
             }
 
             sourceComponent: SettingsView {
+                // Sized up front so the first page is picked for the real width.
+                width: settingsLoader.width
+                height: settingsLoader.height
+                page: window.settingsPage
+                onPageChanged: window.settingsPage = page
                 onCloseRequested: window.settingsOpen = false
                 onColorEditRequested: (role, label, current) => window.editSyntaxColor(role, label, current)
             }
@@ -535,7 +558,7 @@ FloatingWindow {
                 anchors.fill: parent
                 visible: fileDrop.containsDrag
                 color: Style.primaryHover
-                border.width: Style.focusRingWidth
+                border.width: Style.outlineWidthFocused
                 border.color: Style.primary
             }
         }
@@ -574,7 +597,7 @@ FloatingWindow {
                 enabled: window.canEdit
                 submenu: true
                 text: I18n.tr("Lines and Case", "window menu item opening line and letter case commands")
-                onClicked: window.openSubmenu(linesMenu)
+                onClicked: windowMenu.openSubmenu(linesMenu)
             }
 
             FileMenuDivider {}
@@ -584,7 +607,7 @@ FloatingWindow {
                 enabled: SessionData.recentFiles.length > 0
                 submenu: true
                 text: I18n.tr("Open Recent", "window menu item")
-                onClicked: window.openSubmenu(recentMenu)
+                onClicked: windowMenu.openSubmenu(recentMenu)
             }
 
             FileMenuItem {
@@ -708,7 +731,6 @@ FloatingWindow {
             id: recentMenu
 
             width: window.menuWidth
-            parentMenu: windowMenu
 
             Repeater {
                 model: SessionData.recentFiles.slice(0, window.recentLimit)
@@ -742,7 +764,6 @@ FloatingWindow {
             id: linesMenu
 
             width: window.menuWidth
-            parentMenu: windowMenu
 
             FileMenuItem {
                 iconName: "content_copy"

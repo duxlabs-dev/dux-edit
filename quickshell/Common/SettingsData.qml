@@ -5,6 +5,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.DCommon.Common as DC
+import "SettingsDefaults.js" as Defaults
 
 // settings.json in the config dir. The Go core never reads it; what it needs arrives as request params.
 Singleton {
@@ -12,8 +13,6 @@ Singleton {
 
     // Read by Theme and DCommon through DC.Style.settings; Style falls back for the rest.
     readonly property real blurLayerOutlineOpacity: 0
-    readonly property bool reduceMotion: false
-    readonly property int springBounce: 1
 
     property alias viewMode: adapter.viewMode
     property alias useMonospace: adapter.useMonospace
@@ -44,6 +43,27 @@ Singleton {
     property alias presetTheme: adapter.presetTheme
     property alias language: adapter.language
 
+    property alias density: adapter.density
+    property alias radiusStrength: adapter.radiusStrength
+    property alias fontSource: adapter.fontSource
+    property alias fontWeight: adapter.fontWeight
+    property alias fontScale: adapter.fontScale
+    property alias floatingWindowTransparency: adapter.floatingWindowTransparency
+    property alias floatingWindowForegroundLayers: adapter.floatingWindowForegroundLayers
+    property alias floatingWindowForegroundTransparency: adapter.floatingWindowForegroundTransparency
+    property alias blurEnabled: adapter.blurEnabled
+    property alias animationDuration: adapter.animationDuration
+    property alias reduceMotion: adapter.reduceMotion
+    property alias springBounce: adapter.springBounce
+    property alias enableRippleEffects: adapter.enableRippleEffects
+    property alias focusRingEnabled: adapter.focusRingEnabled
+    property alias focusRingWidth: adapter.focusRingWidth
+    property alias focusRingColor: adapter.focusRingColor
+    property alias scrollbarsEnabled: adapter.scrollbarsEnabled
+    property alias scrollShadowsEnabled: adapter.scrollShadowsEnabled
+    property alias textRenderType: adapter.textRenderType
+    property alias textRenderQuality: adapter.textRenderQuality
+
     readonly property int defaultFontSize: 14
     readonly property int minFontSize: 8
     readonly property int maxFontSize: 48
@@ -53,7 +73,38 @@ Singleton {
     function set(key: string, value: var): void {
         if (adapter[key] === undefined)
             return;
-        root[key] = value;
+        switch (key) {
+        case "density":
+            setDensity(value);
+            return;
+        default:
+            root[key] = value;
+        }
+    }
+
+    function hasDefault(key: string): bool {
+        return Defaults.has(key);
+    }
+
+    function defaultFor(key: string): var {
+        return Defaults.value(key, density);
+    }
+
+    function isDefault(key: string): bool {
+        return root[key] === defaultFor(key);
+    }
+
+    function resetToDefault(key: string): void {
+        if (!hasDefault(key))
+            return;
+        root[key] = defaultFor(key);
+    }
+
+    function setDensity(next: string): void {
+        const moved = Defaults.transition(root, density, next);
+        density = next;
+        for (const key in moved)
+            root[key] = moved[key];
     }
 
     function setFontSize(size: int): void {
@@ -124,6 +175,31 @@ Singleton {
             property string presetTheme: "purple"
             // Empty follows the system locale.
             property string language: ""
+
+            // "spacious" | "comfortable" | "compact" | "dense"
+            property string density: "comfortable"
+            property int radiusStrength: 50
+            // "auto" follows DMS typography when present; "system" | "custom" (the bundled fonts)
+            property string fontSource: "auto"
+            property int fontWeight: 400
+            property real fontScale: 1.0
+            property real floatingWindowTransparency: 1.0
+            property bool floatingWindowForegroundLayers: true
+            property real floatingWindowForegroundTransparency: 1.0
+            property bool blurEnabled: false
+            property int animationDuration: 250
+            property bool reduceMotion: false
+            // 0 smooth, 1 balanced, 2 playful
+            property int springBounce: 1
+            property bool enableRippleEffects: true
+            property bool focusRingEnabled: true
+            property real focusRingWidth: 1.5
+            // "primary" | "secondary" | "outline" | "surfaceText"
+            property string focusRingColor: "primary"
+            property bool scrollbarsEnabled: true
+            property bool scrollShadowsEnabled: true
+            property int textRenderType: DC.Style.TextRenderType.Qt
+            property int textRenderQuality: DC.Style.TextRenderQuality.Default
         }
     }
 }

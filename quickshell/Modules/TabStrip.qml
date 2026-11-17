@@ -200,7 +200,7 @@ Item {
                     y: (row.height - height) / 2
                     implicitHeight: row.tabHeight
                     radius: Style.fullRadius(width, height)
-                    color: current ? Style.selectedContainer : (dragging ? Style.chipSurface : "transparent")
+                    color: current ? Style.selectedColor(true) : (dragging ? Style.foregroundColor(Style.chipSurface, true) : "transparent")
                     Accessible.role: Accessible.PageTab
                     Accessible.name: tab.doc?.title ?? ""
                     Accessible.selected: current

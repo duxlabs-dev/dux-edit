@@ -10,6 +10,10 @@ SettingsRow {
     property int value: 0
     property alias minimum: slider.minimum
     property alias maximum: slider.maximum
+    property alias step: slider.step
+    property alias unit: slider.unit
+    // The value is stored times 10^decimals; the label divides it back.
+    property alias decimals: slider.decimals
 
     signal sliderValueChanged(int newValue)
 

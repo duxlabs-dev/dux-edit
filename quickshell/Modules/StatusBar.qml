@@ -132,7 +132,7 @@ Rectangle {
     }
 
     implicitHeight: Style.buttonHeightXS + Style.spacingXS * 2
-    color: Style.hostSurface
+    color: "transparent"
 
     component Chip: StyledButton {
         id: chip

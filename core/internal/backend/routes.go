@@ -74,6 +74,7 @@ func (b *Backend) routes() *ipc.Mux {
 	mux.Handle("dialog.saveFile", handle(b.dialogSaveFile))
 	mux.Handle("system.colorScheme.get", handle(b.systemColorScheme))
 	mux.Handle("system.elevation", handle(b.systemElevation))
+	mux.Handle("system.blur", handle(b.systemBlur))
 	mux.Handle("import.dms", handle(b.importDMS))
 	return mux
 }

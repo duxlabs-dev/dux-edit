@@ -25,7 +25,6 @@ FileMenu {
     // A Popup is not an Item, so it is held by a property and given the menu's parent to show in.
     property FileMenu subMenu: FileMenu {
         parent: root.parent
-        parentMenu: root
 
         FileMenuItem {
             visible: root.subMenuKind === "lines"
@@ -124,9 +123,8 @@ FileMenu {
     }
 
     function openSub(kind) {
-        close();
         subMenuKind = kind;
-        subMenu.openAt(x, y);
+        openSubmenu(subMenu);
     }
 
     function show(found, x, y) {
