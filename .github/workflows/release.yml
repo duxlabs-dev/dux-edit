@@ -1,0 +1,203 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  CGO_ENABLED: "0"
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ./core/go.mod
+          cache-dependency-path: core/go.sum
+
+      - name: Run tests
+        run: go test -v ./...
+
+  build:
+    name: Build Binaries
+    needs: [test]
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ./core/go.mod
+          cache-dependency-path: core/go.sum
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: 0
+        run: |
+          VERSION=${{ github.ref_name }}
+          BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          BINARY_NAME="dux-edit-${{ matrix.goos }}-${{ matrix.goarch }}"
+          make -C core sync-shell
+          cd core
+          go build -tags withshell -ldflags "-s -w -X main.Version=${VERSION#v} -X main.Commit=${{ github.sha }} -X main.BuildTime=${BUILD_TIME}" -o "../${BINARY_NAME}" ./cmd/dux-edit
+          cd ..
+          gzip -c "${BINARY_NAME}" > "${BINARY_NAME}.gz"
+          tar -czf "${BINARY_NAME}.tar.gz" "${BINARY_NAME}"
+          sha256sum "${BINARY_NAME}.gz" > "${BINARY_NAME}.gz.sha256"
+          sha256sum "${BINARY_NAME}.tar.gz" > "${BINARY_NAME}.tar.gz.sha256"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dux-edit-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            dux-edit-${{ matrix.goos }}-${{ matrix.goarch }}.gz
+            dux-edit-${{ matrix.goos }}-${{ matrix.goarch }}.gz.sha256
+            dux-edit-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+            dux-edit-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz.sha256
+
+  package_completions:
+    name: Package Shell Completions
+    needs: [test]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ./core/go.mod
+          cache-dependency-path: core/go.sum
+
+      - name: Generate completions
+        run: |
+          VERSION_NUM=${GITHUB_REF_NAME#v}
+          cd core
+          go build -o /tmp/dux-edit ./cmd/dux-edit
+          mkdir -p completions
+          /tmp/dux-edit completion bash > completions/dux-edit
+          /tmp/dux-edit completion zsh > completions/_dux-edit
+          /tmp/dux-edit completion fish > completions/dux-edit.fish
+          tar -czf "../dux-edit-completions-${VERSION_NUM}.tar.gz" -C completions .
+          cd ..
+          sha256sum "dux-edit-completions-${VERSION_NUM}.tar.gz" > "dux-edit-completions-${VERSION_NUM}.tar.gz.sha256"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dux-edit-completions
+          path: |
+            dux-edit-completions-*.tar.gz
+            dux-edit-completions-*.tar.gz.sha256
+
+  create_release:
+    name: Create GitHub Release
+    runs-on: ubuntu-24.04
+    needs: [build, package_completions]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Generate changelog
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            CHANGELOG=$(git log --oneline --pretty=format:"- %s (%h)" | head -50)
+          else
+            CHANGELOG=$(git log --oneline --pretty=format:"- %s (%h)" $PREVIOUS_TAG..HEAD)
+          fi
+
+          cat > CHANGELOG.md << EOF
+          ## What's Changed
+
+          $CHANGELOG
+          EOF
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            cat >> CHANGELOG.md << EOF
+
+          **Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${{ github.ref_name }}
+          EOF
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ./core/go.mod
+          cache-dependency-path: core/go.sum
+
+      # Distro packages build offline from this tarball: it carries the checked-out
+      # dux-qml-common submodule plus vendored Go dependencies.
+      - name: Generate vendored source tarball
+        run: |
+          VERSION_NUM=${GITHUB_REF_NAME#v}
+          cd core && go mod vendor && cd ..
+          tar czf "dux-edit-${VERSION_NUM}.tar.gz" \
+            --transform "s,^,dux-edit-${VERSION_NUM}/,S" \
+            --exclude-vcs \
+            --exclude=artifacts --exclude="dux-edit-*.tar.gz" \
+            --exclude=dux-qt-base *
+
+      - name: Create release and upload assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ github.ref_name }}
+          PRERELEASE_FLAG=""
+          case "$VERSION" in
+            *-*) PRERELEASE_FLAG="--prerelease" ;;
+          esac
+
+          gh release create "$VERSION" \
+            --title "Release $VERSION" \
+            --notes-file CHANGELOG.md \
+            $PRERELEASE_FLAG
+
+          find ./artifacts -type f -name "dux-edit-*" | while read file; do
+            echo "Uploading: $file"
+            gh release upload "$VERSION" "$file" --clobber
+          done
+
+          VERSION_NUM=${VERSION#v}
+          gh release upload "$VERSION" "dux-edit-${VERSION_NUM}.tar.gz" --clobber
+
+          gh release upload "$VERSION" "assets/dev.duxlabs.edit.svg" --clobber
