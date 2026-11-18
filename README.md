@@ -13,6 +13,8 @@ Built with [dux-qt-base](https://github.com/duxlabs-dev/dux-qt-base) and [Go](ht
 [![Discord](https://img.shields.io/badge/discord-join?style=for-the-badge&logo=discord&logoColor=ffffff&label=discord&labelColor=101418&color=5865f2)](https://discord.gg/ppWTpKmPgT)
 [![Ko-Fi donate](https://img.shields.io/badge/donate-kofi?style=for-the-badge&logo=ko-fi&logoColor=ffffff&label=ko-fi&labelColor=101418&color=f16061&link=https%3A%2F%2Fko-fi.com%2Fduxlabs)](https://ko-fi.com/duxlabs)
 
+<img src="assets/screenshot.png" alt="Dux Edit editing a Go file" width="720">
+
 </div>
 
 Dux Edit opens any text file without a project around it: notes, config files, scripts, Markdown. It sits between a scratchpad and an IDE, and takes over from the DMS notepad.
