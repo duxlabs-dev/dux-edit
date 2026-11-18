@@ -44,7 +44,7 @@ Item {
     readonly property int indentWidth: root.doc.indentWidth > 0 ? root.doc.indentWidth : Math.max(1, SettingsData.tabWidth)
     readonly property string indentUnit: indentSpaces ? " ".repeat(indentWidth) : "\t"
     property real wrapWidth: 0
-    readonly property int resizeDelay: 100
+    readonly property int resizeDelay: Timing.settleShort
     readonly property string fontFamily: SettingsData.fontFamily || (SettingsData.useMonospace ? Style.monoFontFamily : Style.fontFamily)
     readonly property int fontSize: SettingsData.fontSize
     readonly property real padding: EditorMetrics.padding

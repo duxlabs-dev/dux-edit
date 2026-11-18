@@ -11,10 +11,10 @@ Singleton {
     readonly property int spellSuggestions: 6
 
     // Debounces, each armed by typing or an edit and single-shot.
-    readonly property int findDelay: 150
-    readonly property int previewDelay: 250
-    readonly property int autosaveDelay: 2000
-    readonly property int pluginWriteDelay: 400
+    readonly property int findDelay: Timing.debounce
+    readonly property int previewDelay: Timing.settle
+    readonly property int autosaveDelay: Timing.hold
+    readonly property int pluginWriteDelay: Timing.debounceSlow
 
     readonly property int windowMinWidth: 360
     readonly property int windowMinHeight: 320
