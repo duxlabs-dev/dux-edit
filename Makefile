@@ -89,7 +89,7 @@ help:
 	@echo "build          - Release build, UI embedded (QTBASE=1 also embeds the dux-qt-base runtime)"
 	@echo "dev            - Fast build without the embedded UI"
 	@echo "run            - dev build, then run against quickshell/ with hot reload"
-	@echo "lint-qml       - qmllint shell.qml through the Quickshell tooling VFS (needs quickshell/.qmlls.ini)"
+	@echo "lint-qml       - qmllint shell.qml through the Quickshell tooling VFS (writes quickshell/.qmlls.ini with `dedit qs tooling`)"
 	@echo "test fmt vet lint clean"
 	@echo "update-common  - Bump the dux-qml-common submodule"
 	@echo "update-qtbase  - Bump the dux-qt-base submodule"
