@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Quickshell
+import qs.DCommon.Common as DC
 
 // The Go core resolves and creates the directories and passes them in the environment.
 // Also serves as DC.Paths.backend.
@@ -20,6 +21,10 @@ Singleton {
 
     readonly property url xdgCache: "file://" + (Quickshell.env("XDG_CACHE_HOME") || home + "/.cache")
     readonly property url imagecache: "file://" + cacheDir + "/imagecache"
+
+    // False on a dux-qt-base without iconThemeRevision, whose icon provider fails on "?rev=".
+    readonly property bool iconThemeLive: "iconThemeRevision" in Quickshell
+    readonly property int iconThemeRevision: iconThemeLive ? Quickshell.iconThemeRevision : 0
 
     function shortenHome(path: string): string {
         if (path === home)
@@ -51,7 +56,15 @@ Singleton {
             return "";
         if (iconName.startsWith("/"))
             return "file://" + iconName;
-        return Quickshell.iconPath(iconName, true);
+        return themeIconUrl(iconName);
+    }
+
+    // The inline half serves a DCommon that predates themeIconUrl.
+    function themeIconUrl(iconName: string): string {
+        if (typeof DC.Paths.themeIconUrl === "function")
+            return DC.Paths.themeIconUrl(iconName);
+        const url = Quickshell.iconPath(iconName, true);
+        return url && iconThemeLive ? url + "?rev=" + iconThemeRevision : url;
     }
 
     function copyPathToClipboard(path: string): void {
