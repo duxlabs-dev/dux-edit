@@ -298,23 +298,49 @@ Singleton {
         return withAlpha(blended, Math.max(0.3, blended.a));
     }
 
-    readonly property int currentAnimationBaseDuration: Math.max(0, SettingsData.animationDuration)
-    readonly property int currentAnimationSpeed: currentAnimationBaseDuration > 0 ? Style.AnimationSpeed.Custom : Style.AnimationSpeed.None
-    readonly property int shorterDuration: Math.round(currentAnimationBaseDuration * 0.2)
-    readonly property int shortDuration: Math.round(currentAnimationBaseDuration * 0.3)
-    readonly property int mediumDuration: Math.round(currentAnimationBaseDuration * 0.6)
+    // Same ladder as DMS: motionDuration -1 is off, 0..4 scale the M3 Expressive spec durations.
+    readonly property var motionDurationScales: [0.5, 0.75, 1, 1.5, 2]
+    readonly property bool motionOff: SettingsData.motionDuration < 0
+    readonly property bool reduceMotion: motionOff || SettingsData.reduceMotion
+    readonly property real motionScale: motionOff ? 0 : (motionDurationScales[SettingsData.motionDuration] ?? 1)
+    readonly property real springScale: motionOff ? 1 : motionScale
+
+    function motionMs(specMs) {
+        return Math.round(specMs * motionScale);
+    }
+
+    readonly property int shorterDuration: motionMs(100)
+    readonly property int shortDuration: motionMs(150)
+    readonly property int mediumDuration: motionMs(300)
     readonly property var expressiveDurations: ({
-            "fast": currentAnimationBaseDuration * 0.4,
-            "normal": currentAnimationBaseDuration * 0.8,
-            "large": currentAnimationBaseDuration * 1.2,
-            "extraLarge": currentAnimationBaseDuration * 2.0,
-            "expressiveFastSpatial": currentAnimationBaseDuration * 0.7,
-            "expressiveDefaultSpatial": currentAnimationBaseDuration,
-            "expressiveSlowSpatial": currentAnimationBaseDuration * 1.3,
-            "expressiveFastEffects": currentAnimationBaseDuration * 0.3,
-            "expressiveEffects": currentAnimationBaseDuration * 0.4,
-            "expressiveSlowEffects": currentAnimationBaseDuration * 0.6
+            "expressiveFastSpatial": motionMs(350),
+            "expressiveDefaultSpatial": motionMs(500),
+            "expressiveSlowSpatial": motionMs(650),
+            "expressiveFastEffects": motionMs(150),
+            "expressiveEffects": motionMs(200),
+            "expressiveSlowEffects": motionMs(300)
         })
+
+    readonly property var springSpecs: ({
+            "fastSpatial": [800, 2 * 0.6 * Math.sqrt(800)],
+            "defaultSpatial": [380, 2 * 0.8 * Math.sqrt(380)],
+            "slowSpatial": [200, 2 * 0.8 * Math.sqrt(200)],
+            "fastEffects": [3800, 2 * Math.sqrt(3800)],
+            "defaultEffects": [1600, 2 * Math.sqrt(1600)],
+            "slowEffects": [800, 2 * Math.sqrt(800)]
+        })
+    readonly property var springDampingScales: [1.22, 1.0, 0.82]
+
+    // Stretching time by springScale keeps the spring's shape while matching the duration step.
+    function springPreset(name) {
+        const spec = springSpecs[name];
+        const dampingScale = name.endsWith("Spatial") ? (springDampingScales[SettingsData.springBounce] ?? 1) : 1;
+        return {
+            "stiffness": spec[0] / (springScale * springScale),
+            "damping": spec[1] / springScale * dampingScale,
+            "mass": 1
+        };
+    }
 
     function withAlpha(c, a) {
         return Style.withAlpha(c, a);

@@ -52,7 +52,7 @@ Singleton {
     property alias floatingWindowForegroundLayers: adapter.floatingWindowForegroundLayers
     property alias floatingWindowForegroundTransparency: adapter.floatingWindowForegroundTransparency
     property alias blurEnabled: adapter.blurEnabled
-    property alias animationDuration: adapter.animationDuration
+    property alias motionDuration: adapter.motionDuration
     property alias reduceMotion: adapter.reduceMotion
     property alias springBounce: adapter.springBounce
     property alias enableRippleEffects: adapter.enableRippleEffects
@@ -120,6 +120,12 @@ Singleton {
         syntaxColors = next;
     }
 
+    function adoptLegacyAnimationDuration(saved: var): void {
+        if (typeof saved?.animationDuration !== "number" || "motionDuration" in saved)
+            return;
+        motionDuration = Defaults.motionStep(saved.animationDuration);
+    }
+
     function flush(): void {
         store.flush();
     }
@@ -132,6 +138,7 @@ Singleton {
 
         name: "settings"
         path: AppPaths.settingsFile
+        parse: text => root.adoptLegacyAnimationDuration(store.objectFrom(text))
 
         adapter: JsonAdapter {
             id: adapter
@@ -187,7 +194,8 @@ Singleton {
             property bool floatingWindowForegroundLayers: true
             property real floatingWindowForegroundTransparency: 1.0
             property bool blurEnabled: false
-            property int animationDuration: 250
+            // -1 off, 0..4 shorter to longer, as in DMS
+            property int motionDuration: 2
             property bool reduceMotion: false
             // 0 smooth, 1 balanced, 2 playful
             property int springBounce: 1

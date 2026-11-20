@@ -9,26 +9,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/duxlabs-dev/dux-go/ipc/spec"
+
 	"github.com/duxlabs-dev/dux-edit/core/internal/backend"
 )
 
 func TestParseParamsBuildsLists(t *testing.T) {
-	open, ok := backend.FindMethod("ui.open")
+	open, ok := backend.Methods.Find("ui.open")
 	require.True(t, ok)
 
-	params, err := parseParams(open, []string{"paths=/a", "line=3", "simple=true"})
+	params, err := open.ParseJSONParams([]string{"paths=/a", "line=3", "simple=true"})
 	require.NoError(t, err)
 	assert.Equal(t, map[string]any{"paths": []any{"/a"}, "line": float64(3), "simple": true}, params, "a list param given once is still a list")
 
-	params, err = parseParams(open, []string{"paths=/a", "paths=2024", "paths=[\"/c\"]"})
+	params, err = open.ParseJSONParams([]string{"paths=/a", "paths=2024", "paths=[\"/c\"]"})
 	require.NoError(t, err)
 	assert.Equal(t, map[string]any{"paths": []any{"/a", "2024", "/c"}}, params, "list items stay strings")
 
-	params, err = parseParams(backend.MethodSpec{}, []string{"x=1", "x=two", "name=[draft"})
+	params, err = spec.Method{}.ParseJSONParams([]string{"x=1", "x=two", "name=[draft"})
 	require.NoError(t, err)
 	assert.Equal(t, map[string]any{"x": []any{float64(1), "two"}, "name": "[draft"}, params, "a repeated key becomes a list")
 
-	_, err = parseParams(open, []string{"novalue"})
+	_, err = open.ParseJSONParams([]string{"novalue"})
 	assert.Error(t, err)
 }
 

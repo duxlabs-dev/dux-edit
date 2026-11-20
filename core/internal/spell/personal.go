@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
+	"github.com/duxlabs-dev/dux-go/atomicfile"
 )
 
 // Serializes the read and the write of appendWord, so two adds cannot both start from the same list.

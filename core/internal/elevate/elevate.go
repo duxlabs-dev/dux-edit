@@ -17,11 +17,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/duxlabs-dev/dux-go/atomicfile"
+	"github.com/duxlabs-dev/dux-go/paths"
 	"github.com/duxlabs-dev/dux-go/portal"
 
-	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
 	"github.com/duxlabs-dev/dux-edit/core/internal/helper"
-	"github.com/duxlabs-dev/dux-edit/core/internal/xdg"
 )
 
 const (
@@ -110,7 +110,7 @@ func (c *Client) executable() (string, error) {
 
 func actionDirs() []string {
 	dirs := []string{"/usr/share/polkit-1/actions"}
-	for _, dir := range xdg.DataDirs() {
+	for _, dir := range paths.XDGDataDirs() {
 		dirs = append(dirs, filepath.Join(dir, "polkit-1", "actions"))
 	}
 	return dirs

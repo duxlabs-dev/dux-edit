@@ -12,7 +12,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
+	"github.com/duxlabs-dev/dux-go/atomicfile"
 )
 
 var (

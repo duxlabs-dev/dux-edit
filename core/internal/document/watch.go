@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
 	"github.com/duxlabs-dev/dux-edit/core/internal/watch"
+	"github.com/duxlabs-dev/dux-go/atomicfile"
 )
 
 // watchDoc watches the file d.path resolves to. Files read through elevation are never watched.

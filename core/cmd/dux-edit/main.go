@@ -16,7 +16,7 @@ var (
 
 func main() {
 	log.SetEnvPrefix(envPrefix)
-	qtbase.MaybeRunAndExit(qtbaseembed.Extract)
+	qtbase.MaybeRunAndExit(qtbaseembed.Locator)
 	if err := rootCmd.Execute(); err != nil {
 		log.Errorf("%v", err)
 		os.Exit(1)

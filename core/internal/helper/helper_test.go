@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
 
-	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
+	"github.com/duxlabs-dev/dux-go/atomicfile"
 )
 
 func runOp(t *testing.T, stdin []byte, args ...string) (string, error) {

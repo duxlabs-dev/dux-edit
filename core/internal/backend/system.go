@@ -4,16 +4,18 @@ import (
 	"context"
 	"errors"
 
-	"github.com/duxlabs-dev/dux-edit/core/internal/blur"
+	"github.com/godbus/dbus/v5"
+
 	"github.com/duxlabs-dev/dux-edit/core/internal/dmsimport"
 	"github.com/duxlabs-dev/dux-edit/core/internal/paths"
-	"github.com/duxlabs-dev/dux-edit/core/internal/portal"
 	"github.com/duxlabs-dev/dux-go/ipc/params"
+	"github.com/duxlabs-dev/dux-go/portal"
+	"github.com/duxlabs-dev/dux-go/wayland/blur"
 )
 
 func dialogFailure(err error) any {
 	switch {
-	case errors.Is(err, portal.ErrCanceled):
+	case errors.Is(err, portal.ErrCancelled):
 		return fail("CANCELED", "")
 	case errors.Is(err, portal.ErrNoPortal):
 		return fail("NOPORTAL", "")
@@ -21,8 +23,22 @@ func dialogFailure(err error) any {
 	return fail("EIO", err.Error())
 }
 
+// One private connection per dialog, so nothing stays registered.
+func dialogConn(ctx context.Context) (*dbus.Conn, error) {
+	conn, err := dbus.ConnectSessionBus(dbus.WithContext(ctx))
+	if err != nil {
+		return nil, portal.ErrNoPortal
+	}
+	return conn, nil
+}
+
 func (b *Backend) dialogOpenFiles(ctx context.Context, p map[string]any) any {
-	found, err := portal.OpenFiles(ctx, portal.OpenOptions{
+	conn, err := dialogConn(ctx)
+	if err != nil {
+		return dialogFailure(err)
+	}
+	defer conn.Close()
+	found, err := portal.OpenFile(ctx, conn, portal.OpenFileOptions{
 		Title:    params.StringOpt(p, "title", ""),
 		Dir:      params.StringOpt(p, "dir", ""),
 		Multiple: params.BoolOpt(p, "multiple", true),
@@ -34,7 +50,12 @@ func (b *Backend) dialogOpenFiles(ctx context.Context, p map[string]any) any {
 }
 
 func (b *Backend) dialogSaveFile(ctx context.Context, p map[string]any) any {
-	path, err := portal.SaveFile(ctx, portal.SaveOptions{
+	conn, err := dialogConn(ctx)
+	if err != nil {
+		return dialogFailure(err)
+	}
+	defer conn.Close()
+	path, err := portal.SaveFile(ctx, conn, portal.SaveFileOptions{
 		Title: params.StringOpt(p, "title", ""),
 		Dir:   params.StringOpt(p, "dir", ""),
 		Name:  params.StringOpt(p, "name", ""),
@@ -46,8 +67,11 @@ func (b *Backend) dialogSaveFile(ctx context.Context, p map[string]any) any {
 }
 
 func (b *Backend) systemColorScheme(context.Context, map[string]any) any {
-	return map[string]any{"scheme": b.scheme.Scheme()}
+	return schemePayload(b.scheme.Scheme())
 }
+
+// The UI reads the scheme name, not colorscheme.State.
+func schemePayload(name string) map[string]any { return map[string]any{"scheme": name} }
 
 func (b *Backend) systemElevation(context.Context, map[string]any) any {
 	state := b.docs.Elevation()

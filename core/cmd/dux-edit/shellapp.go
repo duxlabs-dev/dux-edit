@@ -23,8 +23,8 @@ var shellApp = shellapp.New(shellapp.Config{
 	EnvPrefix:  envPrefix,
 	QSAppID:    desktopID,
 	Version:    Version,
-	Embedded:   embeddedShell{},
-	QtBase:     qtbaseembed.Extract,
+	Embedded:   shellembed.UI,
+	QtBase:     qtbaseembed.Locator,
 	Boot:       bootBackend,
 	ExtraEnv:   func(string) []string { return paths.UIEnv(envPrefix) },
 	ShowMethod: "ui.show",
@@ -48,11 +48,3 @@ func flushSwaps(int, time.Duration, string) {
 		b.FlushSwaps()
 	}
 }
-
-type embeddedShell struct{}
-
-func (embeddedShell) Available() bool { return shellembed.Available() }
-
-func (embeddedShell) Extract(baseDir string) (string, error) { return shellembed.Extract(baseDir) }
-
-func (embeddedShell) Prune(baseDir, keep string) { shellembed.Prune(baseDir, keep) }

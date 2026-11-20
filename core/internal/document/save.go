@@ -11,10 +11,10 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
 	"github.com/duxlabs-dev/dux-edit/core/internal/buffer"
 	"github.com/duxlabs-dev/dux-edit/core/internal/helper"
 	"github.com/duxlabs-dev/dux-edit/core/internal/textcodec"
+	"github.com/duxlabs-dev/dux-go/atomicfile"
 )
 
 // ErrConflict matches the helper's conflict code across the pkexec boundary.

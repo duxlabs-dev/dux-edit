@@ -10,7 +10,7 @@ import qs.Services
 Item {
     id: root
 
-    readonly property bool motion: !Style.reduceMotion && Style.currentAnimationSpeed !== Style.AnimationSpeed.None
+    readonly property bool motion: !Style.reduceMotion
 
     z: 1000
     visible: bar.opacity > 0
@@ -43,7 +43,7 @@ Item {
 
             DAnim {
                 duration: Style.expressiveDurations.expressiveEffects
-                easing.bezierCurve: Style.expressiveCurves.standardDecel
+                easing.bezierCurve: Style.expressiveCurves.expressiveEffects
             }
         }
 

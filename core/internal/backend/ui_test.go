@@ -18,11 +18,12 @@ func TestUIOpenKeepsPerFilePositions(t *testing.T) {
 		"paths": []any{"/a", "/b"}, "line": 3, "positions": positions,
 	}).(map[string]any)
 	require.Equal(t, true, result["ok"])
-	require.Len(t, b.pending.payloads, 1)
-	payload, err := json.Marshal(b.pending.payloads[0]["positions"])
+	queued := b.pending.Take()
+	require.Len(t, queued, 1)
+	payload, err := json.Marshal(queued[0]["positions"])
 	require.NoError(t, err)
 	assert.JSONEq(t, `[{"line":3,"column":0},{"line":9,"column":2}]`, string(payload))
-	assert.Equal(t, 3, b.pending.payloads[0]["line"])
+	assert.Equal(t, 3, queued[0]["line"])
 }
 
 func TestUIOpenRejectsInvalidPerFilePositions(t *testing.T) {
@@ -39,7 +40,7 @@ func TestUIOpenRejectsInvalidPerFilePositions(t *testing.T) {
 		}).(map[string]any)
 		assert.Equal(t, false, result["ok"], "%#v", positions)
 		assert.Equal(t, "INVALID", result["code"])
-		assert.Empty(t, b.pending.payloads)
+		assert.Empty(t, b.pending.Take())
 	}
 }
 
@@ -58,13 +59,14 @@ func TestUIOpenEnvironmentUsesTheSamePositionValidation(t *testing.T) {
 			b := &Backend{bus: ipc.NewEventBus()}
 			b.takeOpenEnv()
 			assert.Empty(t, os.Getenv(OpenEnv))
+			queued := b.pending.Take()
 			if !tc.valid {
-				assert.Empty(t, b.pending.payloads)
+				assert.Empty(t, queued)
 				return
 			}
-			require.Len(t, b.pending.payloads, 1)
-			assert.Equal(t, "open", b.pending.payloads[0]["action"])
-			assert.Equal(t, 3, b.pending.payloads[0]["line"])
+			require.Len(t, queued, 1)
+			assert.Equal(t, "open", queued[0]["action"])
+			assert.Equal(t, 3, queued[0]["line"])
 		})
 	}
 }

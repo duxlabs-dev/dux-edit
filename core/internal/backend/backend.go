@@ -7,12 +7,12 @@ import (
 	"os"
 	"slices"
 
-	"github.com/duxlabs-dev/dux-edit/core/internal/colorscheme"
 	"github.com/duxlabs-dev/dux-edit/core/internal/document"
 	"github.com/duxlabs-dev/dux-edit/core/internal/elevate"
 	"github.com/duxlabs-dev/dux-edit/core/internal/highlight"
 	"github.com/duxlabs-dev/dux-edit/core/internal/paths"
 	"github.com/duxlabs-dev/dux-edit/core/internal/spell"
+	"github.com/duxlabs-dev/dux-go/colorscheme"
 	"github.com/duxlabs-dev/dux-go/ipc"
 )
 
@@ -29,7 +29,7 @@ type Backend struct {
 	bus     *ipc.EventBus
 	server  *ipc.Server
 	done    chan error
-	pending PendingOpen
+	pending ipc.PendingOpen
 
 	docs      *document.Store
 	highlight *highlight.Service
@@ -53,7 +53,9 @@ func Start(ctx context.Context, appID, version string) (*Backend, error) {
 	b.spell = spell.New(b.docs, b.highlight, b.bus.Publish, dictionary)
 	b.docs.AddListener(b.highlight)
 	b.docs.AddListener(b.spell)
-	b.scheme = colorscheme.New(b.bus.Publish)
+	b.scheme = colorscheme.New(func(s colorscheme.State) {
+		b.bus.Publish(colorscheme.Topic, schemePayload(s.Name()))
+	})
 	b.takeOpenEnv()
 
 	b.server = ipc.NewServer(ipc.Config{
@@ -93,7 +95,7 @@ func (b *Backend) replayState(topics []string, _ *ipc.Subscriber) {
 		b.pending.Flush(b.bus)
 	}
 	if slices.Contains(topics, colorscheme.Topic) {
-		b.bus.Publish(colorscheme.Topic, map[string]any{"scheme": b.scheme.Scheme()})
+		b.bus.Publish(colorscheme.Topic, schemePayload(b.scheme.Scheme()))
 	}
 }
 

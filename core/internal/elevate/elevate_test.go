@@ -17,8 +17,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sys/unix"
 
-	"github.com/duxlabs-dev/dux-edit/core/internal/atomicfile"
 	"github.com/duxlabs-dev/dux-edit/core/internal/helper"
+	"github.com/duxlabs-dev/dux-go/atomicfile"
 )
 
 const (

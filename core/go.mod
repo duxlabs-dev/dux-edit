@@ -5,7 +5,7 @@ go 1.27.3
 require (
 	github.com/alecthomas/chroma/v2 v2.27.0
 	github.com/clipperhouse/uax29/v2 v2.7.0
-	github.com/duxlabs-dev/dux-go v1.6.3-0.20261110155217-26b745ee0afd
+	github.com/duxlabs-dev/dux-go v1.6.3-0.20261120071808-41a7a754376e
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.5
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/godbus/dbus/v5 v5.2.4

@@ -21,7 +21,7 @@ Item {
     readonly property real tabSpacing: Style.spacingXS
     readonly property real tabHeight: Style.buttonHeightXS
     readonly property real tabMaxWidth: Style.sidebarWidth
-    readonly property bool motion: !Style.reduceMotion && Style.currentAnimationSpeed !== Style.AnimationSpeed.None
+    readonly property bool motion: !Style.reduceMotion
 
     signal renameRequested(var doc)
 
@@ -164,11 +164,25 @@ Item {
             }
         }
 
+        function scrollBy(delta) {
+            contentX = Math.max(0, Math.min(Math.max(0, contentWidth - width), contentX - delta));
+        }
+
         WheelHandler {
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
             onWheel: event => {
-                const delta = event.angleDelta.y !== 0 ? event.angleDelta.y : event.angleDelta.x;
-                strip.contentX = Math.max(0, Math.min(Math.max(0, strip.contentWidth - strip.width), strip.contentX - delta));
+                if (event.angleDelta.y !== 0)
+                    strip.scrollBy(event.angleDelta.y);
+            }
+        }
+
+        // A vertical WheelHandler never sees pure sideways input: thumb and tilt wheels, touchpad swipes.
+        WheelHandler {
+            orientation: Qt.Horizontal
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+            onWheel: event => {
+                if (event.angleDelta.y === 0)
+                    strip.scrollBy(event.angleDelta.x);
             }
         }
 

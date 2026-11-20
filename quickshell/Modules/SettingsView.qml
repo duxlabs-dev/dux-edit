@@ -22,7 +22,7 @@ Rectangle {
     property bool forward: true
     readonly property bool wide: width >= EditorMetrics.settingsSplitMinWidth
     readonly property string shownPage: page !== "" || !wide ? page : pages[0].id
-    readonly property bool motion: !Style.reduceMotion && Style.currentAnimationSpeed !== Style.AnimationSpeed.None
+    readonly property bool motion: !Style.reduceMotion
 
     readonly property var pages: [
         {
@@ -466,20 +466,16 @@ Rectangle {
             SettingsCard {
                 title: I18n.tr("Motion", "settings section")
 
-                SettingsSliderRow {
-                    text: I18n.tr("Animation Duration", "setting name")
-                    description: I18n.tr("0 turns animations off.", "setting description")
-                    minimum: 0
-                    maximum: 1000
-                    step: 50
-                    unit: "ms"
-                    value: SettingsData.animationDuration
-                    resettable: !SettingsData.isDefault("animationDuration")
-                    onResetRequested: SettingsData.resetToDefault("animationDuration")
-                    onSliderValueChanged: newValue => SettingsData.animationDuration = newValue
+                SettingsDropdownRow {
+                    text: I18n.tr("Duration", "animation duration setting name")
+                    options: [I18n.tr("Off", "animation duration option"), I18n.tr("Shorter", "animation duration option"), I18n.tr("Short", "animation duration option"), I18n.tr("Medium", "animation duration option"), I18n.tr("Long", "animation duration option"), I18n.tr("Longer", "animation duration option")]
+                    optionValues: ["-1", "0", "1", "2", "3", "4"]
+                    currentValue: String(SettingsData.motionDuration)
+                    onValueChanged: value => SettingsData.motionDuration = Number(value)
                 }
 
                 SettingsDropdownRow {
+                    visible: !Style.motionOff
                     text: I18n.tr("Spring", "spring bounce setting name")
                     options: [I18n.tr("Smooth", "spring bounce"), I18n.tr("Balanced", "spring bounce"), I18n.tr("Playful", "spring bounce")]
                     optionValues: ["0", "1", "2"]
@@ -488,12 +484,14 @@ Rectangle {
                 }
 
                 SettingsToggleRow {
+                    visible: !Style.motionOff
                     text: I18n.tr("Ripple Effects", "setting name")
                     checked: SettingsData.enableRippleEffects
                     onToggled: checked => SettingsData.enableRippleEffects = checked
                 }
 
                 SettingsToggleRow {
+                    visible: !Style.motionOff
                     text: I18n.tr("Reduce Motion", "setting name")
                     checked: SettingsData.reduceMotion
                     onToggled: checked => SettingsData.reduceMotion = checked
