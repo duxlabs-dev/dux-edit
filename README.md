@@ -27,9 +27,33 @@ Dux Edit opens any text file without a project around it: notes, config files, s
 
 Dux Edit is a Go binary that carries its own QML UI and runs it on [dux-qt-base](https://github.com/duxlabs-dev/dux-qt-base).
 
-## Build and run
+## Installation
 
-You need Go and dux-qt-base 0.4.3 or newer (the `dux-qt-base` package, `libdux-qt-base0` on Debian and Ubuntu). Spellcheck uses `hunspell` and its dictionaries when they are installed.
+Dux Edit is packaged as `dux-edit` (stable) and `dux-edit-git` (development) for Arch (AUR, `dux-edit-bin`), Fedora and CentOS (Copr), Debian and openSUSE (OBS), Ubuntu (PPA) and Void (stable only). Add the [Dux Labs repository](https://duxlabs.dev/docs/repo/) for your distribution and install it:
+
+```sh
+paru -S dux-edit-bin             # Arch
+sudo dnf install dux-edit        # Fedora, after enabling the duxlabs/dux-repo Copr
+sudo apt install dux-edit        # Debian and Ubuntu
+sudo zypper install dux-edit     # openSUSE
+sudo xbps-install -S dux-edit    # Void
+```
+
+Release binaries, building from source and making it your default editor are covered in the [installation guide](https://duxlabs.dev/docs/dedit/installation).
+
+## Using it
+
+```sh
+dux-edit                          # show the window, start the app first if it is not running
+dux-edit notes.md todo.txt        # open files as tabs in the running app
+dux-edit main.go --line 42 --column 7
+```
+
+CLI commands, settings, keyboard shortcuts, plugins and the IPC surface are in the [Dux Edit documentation](https://duxlabs.dev/docs/dedit/).
+
+## Development
+
+You need Go and dux-qt-base 0.4.3 or newer.
 
 ```sh
 git clone --recurse-submodules https://github.com/duxlabs-dev/dux-edit.git
@@ -38,38 +62,6 @@ make run
 ```
 
 `make run` makes a build without the embedded UI and loads `quickshell/` straight from the repo, with hot reload.
-
-```sh
-make
-sudo make install
-```
-
-`make` builds `core/bin/dux-edit` with the UI embedded. `make install` puts the binary, the `dedit` alias, the desktop entry and the icon under `/usr/local`. `make QTBASE=1` also builds dux-qt-base from the submodule and embeds it.
-
-## Using it
-
-```sh
-dux-edit                          # show the window, start the app first if it is not running
-dux-edit notes.md todo.txt        # open files as tabs in the running app
-dux-edit main.go --line 42 --column 7
-dux-edit --simple notes.md        # Simple mode
-dux-edit --new-instance           # a separate app instead of tabs in the running one
-dux-edit run -d                   # run in the background
-dux-edit ipc describe             # every socket method
-dux-edit kill
-```
-
-A file named like a command (`run`, `kill`, `ipc`, `qs`, `version`, `help`, ...) needs a path: `dux-edit ./run`.
-
-## Where things live
-
-| Path | What |
-|---|---|
-| `~/.config/dux/edit/settings.json` | Settings |
-| `~/.config/dux/edit/custom_dictionary.txt` | Words added to the spellcheck dictionary, one per line |
-| `~/.config/dux/edit/plugins/` | Plugins |
-| `~/.local/state/dux/edit/session.json` | Open tabs (never their text) |
-| `~/.local/state/dux/edit/swap/` | Drafts and unsaved changes |
 
 ## License
 
