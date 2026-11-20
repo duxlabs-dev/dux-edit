@@ -46,6 +46,8 @@ type Store struct {
 	watcher   *watch.Watcher
 	// Keep closed dirty swaps locked while hidden so other instances cannot recover them.
 	parked map[string]*swap.Lock
+	// flock is per open file, so a recovery probe in this process would refuse our own open as LOCKED.
+	swapLockMu sync.Mutex
 }
 
 func NewStore(publish Publisher) *Store {

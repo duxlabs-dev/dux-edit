@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -322,17 +323,17 @@ func TestMixedLineEndingsSurviveMultilineResetAndClose(t *testing.T) {
 func TestSaveChecksTheFileAndTheText(t *testing.T) {
 	h := newHarness(t, t.TempDir())
 	path := filepath.Join(t.TempDir(), "note.txt")
-	require.NoError(t, os.WriteFile(path, []byte("a b"), 0o644))
+	require.NoError(t, os.WriteFile(path, []byte("a\u00a0b"), 0o644))
 	doc := h.open(t, OpenRequest{Path: path})
 	h.edit(t, doc.DocID, 1, 3, 0, "!")
 
-	assert.Equal(t, Fail(CodeDesync, ""), h.save(SaveRequest{DocID: doc.DocID, Version: 1, MD5: qtMD5("a b!")}),
+	assert.Equal(t, Fail(CodeDesync, ""), h.save(SaveRequest{DocID: doc.DocID, Version: 1, MD5: qtMD5("a\u00a0b!")}),
 		"TextEdit reports a no-break space as a space")
 	res := h.save(SaveRequest{DocID: doc.DocID, Version: 1, MD5: qtMD5("a b!")})
 	require.IsType(t, SaveResult{}, res)
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
-	assert.Equal(t, "a b!", string(data), "the file keeps the no-break space")
+	assert.Equal(t, "a\u00a0b!", string(data), "the file keeps the no-break space")
 
 	require.NoError(t, os.WriteFile(path, []byte("changed elsewhere"), 0o644))
 	assert.Equal(t, Fail(CodeConflict, ""), h.save(SaveRequest{DocID: doc.DocID, Version: 1}))
@@ -409,6 +410,36 @@ func TestRecoverySkipsSwapsHeldByAnotherInstance(t *testing.T) {
 	assert.Equal(t, "Ideas", restored.Title)
 }
 
+// The window lists recovery while it reopens its tabs; that probe must not refuse our own reopen.
+func TestReopeningADraftRacesTheRecoveryList(t *testing.T) {
+	swapDir := t.TempDir()
+	first := newHarness(t, swapDir)
+	draft := first.open(t, OpenRequest{})
+	first.edit(t, draft.DocID, 1, 0, 0, "draft text")
+	first.Flush()
+	first.Shutdown()
+
+	for range 100 {
+		h := newHarness(t, swapDir)
+		var probing atomic.Bool
+		probing.Store(true)
+		started := make(chan struct{})
+		var wg sync.WaitGroup
+		wg.Go(func() {
+			close(started)
+			for probing.Load() {
+				h.Recovery()
+			}
+		})
+		<-started
+		raw := h.Open(OpenRequest{SwapID: draft.SwapID})
+		probing.Store(false)
+		wg.Wait()
+		require.IsType(t, OpenResult{}, raw, "%#v", raw)
+		h.Shutdown()
+	}
+}
+
 func TestWatchReportsOnlyForeignChanges(t *testing.T) {
 	h := newHarness(t, t.TempDir())
 	path := filepath.Join(t.TempDir(), "note.txt")
@@ -433,14 +464,14 @@ func TestWatchReportsOnlyForeignChanges(t *testing.T) {
 func TestResetKeepsWhatTextEditCannotReport(t *testing.T) {
 	h := newHarness(t, t.TempDir())
 	path := filepath.Join(t.TempDir(), "note.txt")
-	require.NoError(t, os.WriteFile(path, []byte("a b\nc d\ne "), 0o644))
+	require.NoError(t, os.WriteFile(path, []byte("a\u00a0b\nc\u2028d\ne\u00a0"), 0o644))
 	doc := h.open(t, OpenRequest{Path: path})
 
 	h.Reset(doc.DocID, 1, "a b\nc\nd!\ne ", false)
 	require.IsType(t, SaveResult{}, h.save(SaveRequest{DocID: doc.DocID, Version: 1, MD5: qtMD5("a b\nc\nd!\ne ")}))
 	data, err := os.ReadFile(path)
 	require.NoError(t, err)
-	assert.Equal(t, "a b\nc d!\ne ", string(data))
+	assert.Equal(t, "a\u00a0b\nc\u2028d!\ne\u00a0", string(data))
 }
 
 type fakeElevator struct {

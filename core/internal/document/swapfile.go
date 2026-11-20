@@ -25,7 +25,7 @@ func (s *Store) restoreSwap(id string) (*restoredSwap, *Failure) {
 	}
 	lock := s.takeParked(id)
 	if lock == nil {
-		lock, err = dir.Lock(id)
+		lock, err = s.lockSwap(dir, id)
 	}
 	switch {
 	case errors.Is(err, swap.ErrLocked):
@@ -44,6 +44,24 @@ func (s *Store) restoreSwap(id string) (*restoredSwap, *Failure) {
 		return nil, &Failure{Code: CodeIO, Message: err.Error()}
 	}
 	return &restoredSwap{text: text, side: side, lock: lock}, nil
+}
+
+func (s *Store) lockSwap(dir swap.Dir, id string) (*swap.Lock, error) {
+	s.swapLockMu.Lock()
+	defer s.swapLockMu.Unlock()
+	return dir.Lock(id)
+}
+
+// swapFree probes the lock; the release unlinks it, so it stays under swapLockMu too.
+func (s *Store) swapFree(dir swap.Dir, id string) bool {
+	s.swapLockMu.Lock()
+	defer s.swapLockMu.Unlock()
+	lock, err := dir.Lock(id)
+	if err != nil {
+		return false
+	}
+	lock.Release()
+	return true
 }
 
 func (s *Store) takeParked(id string) *swap.Lock {
@@ -187,7 +205,7 @@ func (s *Store) storeSwap(d *Doc, text string, side swap.Sidecar) error {
 		return err
 	}
 	if d.lock == nil {
-		lock, err := dir.Lock(d.swapID)
+		lock, err := s.lockSwap(dir, d.swapID)
 		if err != nil {
 			return err
 		}
@@ -240,12 +258,8 @@ func (s *Store) Recovery() []RecoveryItem {
 		if open[e.ID] {
 			continue
 		}
-		if !parked[e.ID] {
-			lock, err := dir.Lock(e.ID)
-			if err != nil {
-				continue
-			}
-			lock.Release()
+		if !parked[e.ID] && !s.swapFree(dir, e.ID) {
+			continue
 		}
 		items = append(items, RecoveryItem{SwapID: e.ID, Path: e.Path, Title: e.Title, SavedAt: e.SavedAt, Size: e.Size})
 	}
@@ -279,7 +293,7 @@ func (s *Store) DiscardRecovery(swapID string) any {
 	}
 	lock := s.takeParked(swapID)
 	if lock == nil {
-		lock, err = dir.Lock(swapID)
+		lock, err = s.lockSwap(dir, swapID)
 	}
 	switch {
 	case errors.Is(err, swap.ErrLocked):
