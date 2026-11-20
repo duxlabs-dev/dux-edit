@@ -15,7 +15,7 @@ Files open as tabs in the running app.
 Each file can open at a line and column: ` + appID + ` a:LINE[:COL] b:LINE[:COL].
 +LINE[:COL] and --line/--column apply to the first file. A file whose name really ends in :LINE is opened as named.
 
-A file named like a command (run, kill, ipc, qs, version, helper, import-dms-notes, ...) needs a path: ` + appID + ` ./run`,
+A file named like a command (run, kill, ipc, qs, version, import-dms-notes, ...) needs a path: ` + appID + ` ./run`,
 	Args:          cobra.ArbitraryArgs,
 	SilenceErrors: true,
 	SilenceUsage:  true,
@@ -44,7 +44,6 @@ func init() {
 
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(ipcCmd)
-	rootCmd.AddCommand(helperCmd)
 	rootCmd.AddCommand(importDMSCmd)
 	rootCmd.AddCommand(shellApp.Commands()...)
 }

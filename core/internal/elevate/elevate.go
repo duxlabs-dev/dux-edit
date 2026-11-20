@@ -2,265 +2,78 @@
 package elevate
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/binary"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
-	"os"
-	"os/exec"
 	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/duxlabs-dev/dux-go/atomicfile"
-	"github.com/duxlabs-dev/dux-go/paths"
-	"github.com/duxlabs-dev/dux-go/portal"
+	"github.com/duxlabs-dev/dux-go/elevate"
 
 	"github.com/duxlabs-dev/dux-edit/core/internal/helper"
 )
 
-const (
-	PolicyName = "dev.duxlabs.edit.policy"
-	ActionID   = "dev.duxlabs.edit.save"
-)
-
-const (
-	ReasonSandboxed = "SANDBOXED"
-	ReasonNoPkexec  = "NOPKEXEC"
-	ReasonNoPolicy  = "NOPOLICY"
-	ReasonNoBinary  = "NOBINARY"
-)
+const PolicyName = "dev.duxlabs.edit.policy"
 
 // Matches document.MaxOpenBytes; a larger read stops the helper instead of filling memory.
 const maxRead = 32 << 20
 
-const frameSize = 1 << 20
-
-// Once the helper has all its input it only has to fsync; past this it is stuck, and the user cannot
-// signal a root process. The password prompt comes before that point and is not bounded.
-var waitAfterEOF = 30 * time.Second
-
-var (
-	ErrUnavailable = errors.New("elevation unavailable")
-	ErrTooLarge    = errors.New("file too large")
-	// ErrConflict comes back from Replace when the file no longer has the given identity.
-	ErrConflict = helper.ErrConflict
-)
-
-// Error carries a helper result code; errors.Is matches it against fs.ErrExist, fs.ErrPermission,
-// fs.ErrNotExist and ErrConflict.
-type Error = helper.Error
+var ErrTooLarge = errors.New("file too large")
 
 type Client struct {
-	pkexec string
-	exe    string
-	env    []string
-	once   sync.Once
-	exeErr error
+	helper *elevate.Client
 }
 
-func New() *Client { return &Client{} }
+func New() *Client { return &Client{helper: &elevate.Client{Policy: PolicyName}} }
 
 // Available returns "" when an elevated save can be offered, otherwise the reason it cannot.
-func (c *Client) Available() string {
-	if portal.InFlatpak() {
-		return ReasonSandboxed
-	}
-	if _, err := c.pkexecPath(); err != nil {
-		return ReasonNoPkexec
-	}
-	exe, err := c.executable()
-	if err != nil {
-		return ReasonNoBinary
-	}
-	if !policyCovers(exe, actionDirs()) {
-		return ReasonNoPolicy
-	}
-	return ""
-}
-
-func (c *Client) pkexecPath() (string, error) {
-	if c.pkexec == "" {
-		return exec.LookPath("pkexec")
-	}
-	if _, err := os.Stat(c.pkexec); err != nil {
-		return "", err
-	}
-	return c.pkexec, nil
-}
-
-func (c *Client) executable() (string, error) {
-	c.once.Do(func() {
-		if c.exe != "" {
-			return
-		}
-		exe, err := os.Executable()
-		if err == nil {
-			exe, err = filepath.EvalSymlinks(exe)
-		}
-		c.exe, c.exeErr = exe, err
-	})
-	return c.exe, c.exeErr
-}
-
-func actionDirs() []string {
-	dirs := []string{"/usr/share/polkit-1/actions"}
-	for _, dir := range paths.XDGDataDirs() {
-		dirs = append(dirs, filepath.Join(dir, "polkit-1", "actions"))
-	}
-	return dirs
-}
-
-func policyCovers(exe string, dirs []string) bool {
-	for _, dir := range dirs {
-		body, err := os.ReadFile(filepath.Join(dir, PolicyName))
-		if err != nil {
-			continue
-		}
-		if annotatedPath(string(body)) == exe {
-			return true
-		}
-	}
-	return false
-}
-
-func annotatedPath(policy string) string {
-	const key = `key="org.freedesktop.policykit.exec.path">`
-	_, after, ok := strings.Cut(policy, key)
-	if !ok {
-		return ""
-	}
-	value, _, ok := strings.Cut(after, "<")
-	if !ok {
-		return ""
-	}
-	value = strings.TrimSpace(value)
-	resolved, err := filepath.EvalSymlinks(value)
-	if err != nil {
-		return value
-	}
-	return resolved
-}
+func (c *Client) Available() string { return c.helper.Available() }
 
 // Read returns the bytes and the identity of a file the user cannot read.
 func (c *Client) Read(path string) ([]byte, string, error) {
-	cmd, err := c.command(helper.OpRead, resolve(path))
+	r, err := c.helper.Reader(helper.OpRead, resolve(path))
 	if err != nil {
 		return nil, "", err
 	}
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, "", failure(err, nil)
-	}
-	if err := cmd.Start(); err != nil {
-		return nil, "", failure(err, nil)
-	}
-	out := &capped{limit: maxRead}
-	_, copyErr := io.Copy(out, stdout)
-	stdout.Close()
-	err = waitBounded(cmd, &stderr)
-	switch {
-	case out.over:
+	data, err := io.ReadAll(io.LimitReader(r, maxRead+1))
+	if len(data) > maxRead {
+		_ = r.Close()
 		return nil, "", ErrTooLarge
-	case err != nil:
-		return nil, "", err
-	case copyErr != nil:
-		return nil, "", failure(copyErr, nil)
 	}
-	return out.buf.Bytes(), identity(stderr.Bytes()), nil
+	if closeErr := r.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return nil, "", err
+	}
+	var done helper.Success
+	_ = r.Result(&done)
+	return data, done.Identity, nil
 }
 
-// Replace writes data over path while it still has identity, and returns the new one. An empty identity
-// skips the check.
+// Replace fails unless path still has identity; an empty one skips the check.
 func (c *Client) Replace(path string, data []byte, identity string) (string, error) {
-	return c.stream(data, helper.OpReplace, resolve(path), identity)
+	return c.write(data, helper.OpReplace, resolve(path), identity)
 }
 
 // Create writes a new root-owned file and fails when path exists.
 func (c *Client) Create(path string, data []byte) (string, error) {
-	return c.stream(data, helper.OpWrite, resolve(path))
+	return c.write(data, helper.OpWrite, resolve(path))
 }
 
-func (c *Client) stream(data []byte, op string, args ...string) (string, error) {
-	cmd, err := c.command(op, args...)
+func (c *Client) write(data []byte, op string, args ...string) (string, error) {
+	w, err := c.helper.Writer(op, args...)
 	if err != nil {
 		return "", err
 	}
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return "", failure(err, nil)
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return "", failure(err, nil)
-	}
-	if err := cmd.Start(); err != nil {
-		return "", failure(err, nil)
-	}
-	line, readErr := bufio.NewReader(stdout).ReadString('\n')
-	ready := readErr == nil && line == helper.Ready+"\n"
-	var writeErr error
-	if ready {
-		_, writeErr = io.Copy(stdin, framed(data))
-	}
-	stdin.Close()
-	err = waitBounded(cmd, &stderr)
-	switch {
-	case err != nil:
+	if _, err := w.Write(data); err != nil {
 		return "", err
-	case !ready:
-		return "", &Error{Code: helper.CodeIO, Err: errors.New("the helper did not confirm the file")}
-	case writeErr != nil:
-		return "", failure(writeErr, nil)
 	}
-	return identity(stderr.Bytes()), nil
-}
-
-func waitBounded(cmd *exec.Cmd, stderr *bytes.Buffer) error {
-	result := make(chan error, 1)
-	go func() { result <- cmd.Wait() }()
-	timer := time.NewTimer(waitAfterEOF)
-	defer timer.Stop()
-	select {
-	case err := <-result:
-		if err == nil {
-			return nil
-		}
-		return failure(err, stderr.Bytes())
-	case <-timer.C:
-		return &Error{Code: helper.CodeIO, Err: errors.New("the administrator helper did not exit")}
+	if err := w.Close(); err != nil {
+		return "", err
 	}
-}
-
-func identity(stderr []byte) string {
-	var reported helper.Success
-	_ = json.Unmarshal(lastLine(stderr), &reported)
-	return reported.Identity
-}
-
-func (c *Client) command(op string, args ...string) (*exec.Cmd, error) {
-	pkexec, err := c.pkexecPath()
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrUnavailable, ReasonNoPkexec)
-	}
-	exe, err := c.executable()
-	if err != nil {
-		return nil, fmt.Errorf("%w: %s", ErrUnavailable, ReasonNoBinary)
-	}
-	cmd := exec.Command(pkexec, append([]string{exe, "helper", op}, args...)...)
-	if len(c.env) > 0 {
-		cmd.Env = append(os.Environ(), c.env...)
-	}
-	return cmd, nil
+	var done helper.Success
+	_ = w.Result(&done)
+	return done.Identity, nil
 }
 
 // The helper refuses every symlink, so a link like /etc/resolv.conf is resolved here, as the user.
@@ -273,63 +86,4 @@ func resolve(path string) string {
 		return filepath.Join(dir, filepath.Base(path))
 	}
 	return filepath.Clean(path)
-}
-
-// The zero-length frame at the end commits; a stream cut short before it changes nothing.
-func framed(data []byte) io.Reader {
-	parts := make([]io.Reader, 0, 2*(len(data)/frameSize+1)+1)
-	for len(data) > 0 {
-		n := min(len(data), frameSize)
-		parts = append(parts, bytes.NewReader(binary.BigEndian.AppendUint32(nil, uint32(n))), bytes.NewReader(data[:n]))
-		data = data[n:]
-	}
-	return io.MultiReader(append(parts, bytes.NewReader(make([]byte, 4)))...)
-}
-
-func failure(err error, stderr []byte) error {
-	var exit *exec.ExitError
-	if !errors.As(err, &exit) {
-		return &Error{Code: helper.CodeIO, Err: err}
-	}
-
-	var reported helper.Failure
-	if json.Unmarshal(lastLine(stderr), &reported) == nil && reported.Code != "" {
-		return &Error{Code: helper.Code(reported.Code), Err: errors.New(reported.Error)}
-	}
-
-	switch exit.ExitCode() {
-	case 126:
-		return &Error{Code: helper.CodeAccess, Err: errors.New("administrator authorization was not granted")}
-	case 127:
-		if bytes.Contains(stderr, []byte("Not authorized")) {
-			return &Error{Code: helper.CodeAccess, Err: errors.New("administrator authorization failed")}
-		}
-		return &Error{Code: helper.CodeIO, Err: errors.New("pkexec failed: " + firstLine(stderr))}
-	}
-	return &Error{Code: helper.CodeIO, Err: errors.New("helper exited " + strconv.Itoa(exit.ExitCode()) + ": " + firstLine(stderr))}
-}
-
-func lastLine(out []byte) []byte {
-	lines := bytes.Split(bytes.TrimSpace(out), []byte("\n"))
-	return lines[len(lines)-1]
-}
-
-func firstLine(out []byte) string {
-	line, _, _ := bytes.Cut(bytes.TrimSpace(out), []byte("\n"))
-	return string(line)
-}
-
-// capped fails the copy past limit, which closes the pipe and stops the helper.
-type capped struct {
-	buf   bytes.Buffer
-	limit int
-	over  bool
-}
-
-func (c *capped) Write(p []byte) (int, error) {
-	if c.buf.Len()+len(p) > c.limit {
-		c.over = true
-		return 0, ErrTooLarge
-	}
-	return c.buf.Write(p)
 }

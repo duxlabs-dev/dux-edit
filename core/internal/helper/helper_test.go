@@ -14,6 +14,8 @@ import (
 	"golang.org/x/sys/unix"
 
 	"github.com/duxlabs-dev/dux-go/atomicfile"
+	dhelper "github.com/duxlabs-dev/dux-go/elevate/helper"
+	"github.com/duxlabs-dev/dux-go/files"
 )
 
 func runOp(t *testing.T, stdin []byte, args ...string) (string, error) {
@@ -70,7 +72,7 @@ func TestRunRefusesBadArguments(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			_, err := runOp(t, committed("x"), args...)
 			require.Error(t, err)
-			assert.Equal(t, CodeInvalid, CodeOf(err), err.Error())
+			assert.Equal(t, files.CodeInvalid, dhelper.CodeOf(err), err.Error())
 		})
 	}
 }
@@ -95,47 +97,11 @@ func TestSymlinksAreRefused(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			_, err := runOp(t, committed("data"), args...)
 			require.Error(t, err)
-			assert.NotEqual(t, CodeIO, CodeOf(err), err.Error())
+			assert.NotEqual(t, files.CodeIO, dhelper.CodeOf(err), err.Error())
 		})
 	}
 	assert.Equal(t, "x", readFile(t, target))
 	assert.NoFileExists(t, filepath.Join(real, "new"))
-}
-
-func TestReadStreamsRegularFilesOnly(t *testing.T) {
-	root := t.TempDir()
-	path := filepath.Join(root, "f")
-	require.NoError(t, os.WriteFile(path, bytes.Repeat([]byte("z"), 70000), 0o600))
-
-	out, err := runOp(t, nil, OpRead, path)
-	require.NoError(t, err)
-	assert.Len(t, out, 70000)
-
-	fifo := filepath.Join(root, "fifo")
-	require.NoError(t, unix.Mkfifo(fifo, 0o600))
-	_, err = runOp(t, nil, OpRead, fifo)
-	assert.Equal(t, CodeInvalid, CodeOf(err))
-
-	_, err = runOp(t, nil, OpRead, filepath.Join(root, "missing"))
-	assert.Equal(t, CodeNotFound, CodeOf(err))
-}
-
-func TestWriteCreatesOnlyNewFilesAndDropsAbortedOnes(t *testing.T) {
-	root := t.TempDir()
-	path := filepath.Join(root, "out")
-
-	_, err := runOp(t, committed("hello ", "world"), OpWrite, path)
-	require.NoError(t, err)
-	assert.Equal(t, "hello world", readFile(t, path))
-
-	_, err = runOp(t, committed("again"), OpWrite, path)
-	assert.Equal(t, CodeExists, CodeOf(err))
-	assert.Equal(t, "hello world", readFile(t, path))
-
-	aborted := filepath.Join(root, "aborted")
-	_, err = runOp(t, frames("partial"), OpWrite, aborted)
-	require.Error(t, err)
-	assert.NoFileExists(t, aborted)
 }
 
 func TestReplaceChecksTheIdentity(t *testing.T) {
@@ -146,12 +112,12 @@ func TestReplaceChecksTheIdentity(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, []byte("changed elsewhere"), 0o640))
 
 	_, err := runOp(t, committed("mine"), OpReplace, path, stale)
-	require.ErrorIs(t, err, ErrConflict)
-	assert.Equal(t, CodeConflict, CodeOf(err))
+	require.ErrorIs(t, err, files.ErrConflict)
+	assert.Equal(t, files.CodeConflict, dhelper.CodeOf(err))
 	assert.Equal(t, "changed elsewhere", readFile(t, path))
 
 	_, err = runOp(t, committed("mine"), OpReplace, filepath.Join(root, "gone"), stale)
-	assert.Equal(t, CodeConflict, CodeOf(err), "a deleted file is a conflict too")
+	assert.Equal(t, files.CodeConflict, dhelper.CodeOf(err), "a deleted file is a conflict too")
 
 	_, err = runOp(t, committed("forced"), OpReplace, path, "")
 	require.NoError(t, err, "an empty identity overwrites whatever is there")
@@ -197,27 +163,12 @@ func TestReplaceWritesHardLinkedFilesInPlace(t *testing.T) {
 	assert.Equal(t, "both", readFile(t, link))
 }
 
-func TestMainRefusesOutsidePkexec(t *testing.T) {
-	t.Setenv("PKEXEC_UID", "")
-	var stderr bytes.Buffer
-	assert.Equal(t, ExitRefused, Main([]string{OpRead, "/etc/hostname"}, nil, nil, &stderr))
-	assert.Contains(t, stderr.String(), "pkexec")
-
-	if os.Getuid() == 0 {
-		t.Skip("running as root")
-	}
-	t.Setenv("PKEXEC_UID", "1000")
-	stderr.Reset()
-	assert.Equal(t, ExitRefused, Main([]string{OpRead, "/etc/hostname"}, nil, nil, &stderr))
-	assert.Contains(t, stderr.String(), "root")
-}
-
 func TestWriteAndReplaceAnnounceReadyOnlyOnceTheFileChecksOut(t *testing.T) {
 	root := t.TempDir()
 	path := filepath.Join(root, "f")
 	out, err := runOp(t, committed("x"), OpWrite, path)
 	require.NoError(t, err)
-	assert.Equal(t, Ready+"\n", out)
+	assert.Equal(t, dhelper.Ready+"\n", out)
 
 	out, err = runOp(t, committed("x"), OpWrite, path)
 	require.Error(t, err)
@@ -226,12 +177,12 @@ func TestWriteAndReplaceAnnounceReadyOnlyOnceTheFileChecksOut(t *testing.T) {
 	stale := identityOf(t, path)
 	require.NoError(t, os.WriteFile(path, []byte("changed"), 0o644))
 	out, err = runOp(t, committed("y"), OpReplace, path, stale)
-	require.ErrorIs(t, err, ErrConflict)
+	require.ErrorIs(t, err, files.ErrConflict)
 	assert.Empty(t, out)
 
 	out, err = runOp(t, committed("y"), OpReplace, path, identityOf(t, path))
 	require.NoError(t, err)
-	assert.Equal(t, Ready+"\n", out)
+	assert.Equal(t, dhelper.Ready+"\n", out)
 }
 
 // RLIMIT_FSIZE stands in for a full disk: the reservation fails before a byte of the file changes.
